@@ -1,0 +1,52 @@
+services:
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: redis
+  #   ports:
+  #     - 6379:6379
+  #   volumes:
+  #     - redis_data:/data
+  postgres:
+    image: timescale/timescaledb-ha:pg17
+    container_name: timescaledb
+    ports: 
+     - 5432:5432
+    environment:
+     - POSTGRES_PASSWORD=password
+    volumes:
+      - pg_data:/home/postgres/pgdata/data
+    restart: always
+  vectorizer-worker:
+    image: timescale/pgai-vectorizer-worker:latest
+    environment:
+      PGAI_VECTORIZER_WORKER_DB_URL: ${DB_URL}
+      OPENAI_API_KEY: ${VLLM_API_KEY}
+    depends_on:
+      - postgres
+  # parser-worker:
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: parser-worker
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  llama-pg-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn src.api:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload
+    container_name: llama-pg-api
+    ports:
+      - ${API_PORT:-8000}:${API_PORT:-8000}
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    volumes:
+      - ./src/:/opt/src # for development. remove this bind mount for production
+volumes:
+  pg_data:
+  # redis_data:

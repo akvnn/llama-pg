@@ -1,0 +1,12 @@
+pgai==0.10.5
+llama-parse==0.6.25
+loguru==0.7.3
+psycopg2-binary==2.9.9
+psycopg-pool==3.2.6
+ruff==0.11.12
+numpy==2.2.6
+openai==1.82.1
+arq==0.26.3
+fastapi==0.110.1
+uvicorn==0.29.0
+python-multipart==0.0.20

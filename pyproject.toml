@@ -1,0 +1,20 @@
+[project]
+name = "llama-pg"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "arq==0.26.3",
+    "fastapi==0.110.1",
+    "llama-parse==0.6.25",
+    "loguru==0.7.3",
+    "numpy==2.2.6",
+    "openai==1.82.1",
+    "pgai==0.10.5",
+    "psycopg-pool==3.2.6",
+    "psycopg2-binary==2.9.9",
+    "python-multipart>=0.0.20",
+    "ruff==0.11.12",
+    "uvicorn==0.29.0",
+]
