@@ -163,9 +163,9 @@ class WorkerClient:
                     "url": document.get("url", ""),
                     "title": document.get("title", ""),
                 }
-                parsed_document = self.parser_client.process_document(
+                parsed_document = await self.parser_client.aprocess_document(
                     file_path, extra_info=metadata
-                )  # TODO: -> make async
+                )
                 schemaname = document.get("schemaname")
                 tablename = document.get("tablename")
                 parsed_documents.append(parsed_document)
