@@ -6,6 +6,19 @@ services:
   #     - 6379:6379
   #   volumes:
   #     - redis_data:/data
+  #rontend:
+  #  build:
+  #    context: ./frontend
+  #  container_name: react-frontend
+  #  ports:
+  #      - "5173:5173"
+  #  volumes:
+  #      - ./frontend:/app
+  #      - /app/node_modules
+  #  environment:
+  #      NODE_ENV: development
+  #  stdin_open: true
+  #  tty: true
   postgres:
     image: timescale/timescaledb-ha:pg17
     container_name: timescaledb
