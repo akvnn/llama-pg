@@ -233,6 +233,34 @@ Find relevant chunks from a query
 
 ---
 
+#### `POST /rag`
+Perform RAG query
+
+**Request Body:**
+```json
+{
+  "project_name": "string",
+  "query": "string",
+  "limit": int,
+  "table_name": "string"
+}
+```
+**Response:**
+- `200 OK`:  
+  ```json
+  { "data": result }
+  ```
+- `404 Not Found`:  
+  ```json
+  { "message": "Project '<project_name>' does not exist." }
+  ```
+- `500 Internal Server Error`:  
+  ```json
+  { "message": "Error performing RAG: <error_message>" }
+  ```
+
+---
+
 #### `GET /health`
 Health check endpoint.
 
