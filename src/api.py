@@ -122,7 +122,18 @@ async def find_relevant_chunks(request: RAGRequest):
             schema_name=project_name,
             table_name=table_name,
         )
-        return JSONResponse(status_code=200, content={"data": results})
+        # Convert to serializable format
+        serializable_results = []
+        for result in results:
+            serializable_results.append({
+                "id": result.id,
+                "url": result.url,
+                "title": result.title,
+                "text": result.text,
+                "chunk": result.chunk,
+                "distance": result.distance
+            })
+        return JSONResponse(status_code=200, content={"data": serializable_results})
     except Exception as e:
         return JSONResponse(
             status_code=500,

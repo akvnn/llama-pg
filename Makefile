@@ -12,15 +12,15 @@ CURRENT_DIR := $(shell pwd)
 
 .PHONY: check-pip
 check-pip:
-	pip check
+	uv pip check
 
 .PHONY: check-lint
 check-lint:
-	ruff check src tests --quiet
+	uv run ruff check src tests --quiet
 
 .PHONY: check-format
 check-format:
-	ruff format src tests --check --quiet
+	uv run ruff format src tests --check --quiet
 
 .PHONY: docker-cleanup
 docker-cleanup:
