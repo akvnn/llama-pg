@@ -15,6 +15,10 @@ dependencies = [
     "psycopg-pool==3.2.6",
     "psycopg2-binary==2.9.9",
     "python-multipart>=0.0.20",
-    "ruff==0.11.12",
     "uvicorn==0.29.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.0",
 ]

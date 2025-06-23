@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [ '**' ]
+    branches: ['**']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        command: [ 'pip', 'lint', 'format' ]
+        command: ['pip', 'lint', 'format']
 
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
 
       - name: Install the project
         if: steps.setup-uv.outputs.cache-hit == 'false'
-        run: uv sync --all-extras
+        run: uv sync --all-extras --dev
 
       - name: Run check ${{ matrix.command }}
         run: make check-${{ matrix.command }}
