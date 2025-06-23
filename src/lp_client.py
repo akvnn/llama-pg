@@ -10,6 +10,13 @@ class LlamaParseClient:
             api_key=self.api_key, auto_mode=auto_mode, split_by_page=False
         )
 
+    async def aprocess_document(self, file_path, extra_info):
+        """Process one document asynchronously using LlamaParse"""
+        logger.info(f"Processing {file_path}")
+        doc = await self.client.aload_data(file_path, extra_info=extra_info)
+        logger.info(f"Processed {file_path}")
+        return doc
+
     def process_document(self, file_path, extra_info):
         """Process one document using LlamaParse"""
         doc = None
