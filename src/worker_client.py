@@ -10,7 +10,14 @@ from src.configuration import config
 import pickle
 from psycopg_pool import AsyncConnectionPool
 
-pool = AsyncConnectionPool(config.DB_URL, min_size=5, max_size=10, open=False)
+pool = AsyncConnectionPool(
+    config.DB_URL,
+    min_size=config.DB_POOL_MIN_SIZE,
+    max_size=config.DB_POOL_MIN_SIZE,
+    open=False,
+    max_idle=config.DB_POOL_IDLE_TIMEOUT,
+    max_lifetime=config.DB_POOL_LIFETIME_TIMEOUT,
+)
 
 
 class WorkerClient:
