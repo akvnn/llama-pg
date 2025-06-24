@@ -104,29 +104,34 @@ cd llama-pg
 Create a `.env` file in the root directory:
 
 ```env
-# Required
-LLAMA_CLOUD_API_KEY=your_llamaparse_api_key_here
-DB_URL=postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DBNAME}
+# PostgreSQL Configuration
+DB_URL=<postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DBNAME}>
+DB_POOL_MIN_SIZE=5
+DB_POOL_MAX_SIZE=10
+DB_POOL_IDLE_TIMEOUT=300
+DB_POOL_LIFETIME_TIMEOUT=1800
 
-# vLLM Configuration
+# vLLM/OpenAI Configuration
 VLLM_API_KEY=some_dummy_key
 VLLM_EMBEDDING_MODEL=BAAI/bge-m3
-VLLM_EMBEDDING_HOST=host_ip:host_port
+VLLM_EMBEDDING_HOST=<host_ip:host_port>
+VLLM_MODEL=<llm_name> # Optional
+VLLM_MODEL_HOST=<host_ip:host_port> # Optional
+# Note: set VLLM_EMBEDDING_HOST and VLLM_MODEL_HOST to empty to use OpenAI
 
-# OpenAI Alternative
-OPENAI_API_KEY=your_openai_key
-# Set VLLM_EMBEDDING_HOST to empty to use OpenAI
-VLLM_EMBEDDING_HOST=
+# Parser Configuration
+LLAMA_CLOUD_API_KEY=<your_llamaparse_api_key_here>
+USE_LLAMA_PARSE=true
+LLAMA_PARSE_AUTO_MODE=true
+
+# API Configuration
+API_PORT=8000
 
 # Redis Configuration
 REDIS_ARQ_HOST=redis
 REDIS_ARQ_PORT=6379
-REDIS_ARQ_DATABASE=0
+REDIS_ARQ_DATABASE=1
 REDIS_ARQ_MAX_JOBS=10
-
-# Processing Configuration
-USE_LLAMA_PARSE=true
-LLAMA_PARSE_AUTO_MODE=true
 ```
 
 ### 3. Run the stack

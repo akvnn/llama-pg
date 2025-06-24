@@ -9,21 +9,31 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
     )
-    LLAMA_CLOUD_API_KEY: str | None = None
+    # PostgreSQL Configuration
     DB_URL: str | None = (
         None  # must follow the format: postgresql://{config.PG_USER}:{config.PG_PASSWORD}@{config.PG_HOST}:{config.PG_PORT}/{config.PG_DBNAME}
     )
+    DB_POOL_MIN_SIZE: int = 5
+    DB_POOL_MAX_SIZE: int = 10
+    DB_POOL_IDLE_TIMEOUT: int = 300
+    DB_POOL_LIFETIME_TIMEOUT: int = 1800
+
+    # vLLM/OpenAI Configuration
     VLLM_API_KEY: str = "some_dummy_key"
     VLLM_EMBEDDING_MODEL: str = "BAAI/bge-m3"
     VLLM_EMBEDDING_HOST: str | None = None
     VLLM_MODEL: str | None = None
     VLLM_MODEL_HOST: str | None = None
 
+    # Parser Configuration
+    LLAMA_CLOUD_API_KEY: str | None = None
     USE_LLAMA_PARSE: bool = True
     LLAMA_PARSE_AUTO_MODE: bool = True
 
+    # API Configuration
     API_PORT: int = 8000
 
+    # Worker Configuration
     REDIS_ARQ_HOST: str | None = None
     REDIS_ARQ_PORT: int | None = None
     REDIS_ARQ_DATABASE: int | None = None
