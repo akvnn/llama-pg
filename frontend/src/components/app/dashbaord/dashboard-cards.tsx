@@ -1,4 +1,4 @@
-import { ClockArrowDown, FileClock, Files, Folder } from "lucide-react"
+import { Circle, CircleCheck, ClockArrowDown, FileClock, Files, Folder, RefreshCcw } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import {
@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 export function DashbaordCards() {
   return (
@@ -64,6 +65,35 @@ export function DashbaordCards() {
             </Badge>
           </CardAction>
         </CardHeader>
+      </Card>
+      <Card className="@container/card col-span-full !bg-linear-to-tr">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold tabular-nums @[250px]/card:text-xl">
+            System Status
+          </CardTitle>
+          <CardAction>
+            <Button variant="ghost" className='cursor-pointer'>
+                <RefreshCcw/> 
+                Refresh
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardFooter>
+          <ul className="flex justify-center items-center gap-4">
+            <li className="flex justify-center items-center gap-1">
+              <CircleCheck size={16} className="fill-green-500 dark:fill-green-400"  />
+              <span className="text-sm font-medium">Database</span>
+            </li>
+            <li className="flex justify-center items-center gap-1">
+              <CircleCheck size={16} className="fill-green-500 dark:fill-green-400"  />
+              <span className="text-sm font-medium">Redis Queue</span>
+            </li>
+            <li className="flex justify-center items-center gap-1">
+              <CircleCheck size={16} className="fill-green-500 dark:fill-green-400"  />
+              <span className="text-sm font-medium">Workers</span>
+            </li>
+          </ul>
+        </CardFooter>
       </Card>
     </div>
   )
