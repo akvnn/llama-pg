@@ -30,9 +30,10 @@ COPY --from=builder /opt/.venv /opt/.venv
 COPY ./src ./src
 COPY ./entrypoint.sh /entrypoint.sh
 COPY ./cmd.sh /cmd.sh
+COPY ./healthcheck.sh /healthcheck.sh
 
-RUN dos2unix /entrypoint.sh /cmd.sh 
-RUN chmod +x /entrypoint.sh /cmd.sh 
+RUN dos2unix /entrypoint.sh /cmd.sh /healthcheck.sh
+RUN chmod +x /entrypoint.sh /cmd.sh /healthcheck.sh
 
 ENV PATH=/opt:/opt/.venv/bin:${PATH}
 

@@ -1,31 +1,42 @@
-from loguru import logger
-from src.configuration import config
-from src.lp_client import LlamaParseClient
-from src.worker_client import WorkerClient
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from src.configuration import Settings
+from src.endpoints.document import router as document_router
+from src.endpoints.project import router as project_router
+from src.endpoints.retreival import router as retreival_router
+from src.endpoints.system import router as system_router
 
 
-async def watch_target_tables():
-    if config.USE_LLAMA_PARSE:
-        parser_client = LlamaParseClient(auto_mode=config.LLAMA_PARSE_AUTO_MODE)
-    else:
-        logger.error(
-            "LlamaParseClient is the only one that has been implemented as of now. Please set `USE_LLAMA_PARSE` to True."
-        )
-        return
-    worker_client = WorkerClient(
-        parser_client, client_type=parser_client.__class__.__name__
+def lifecycle_provider(settings: Settings):
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.settings = settings
+
+        # TODO: add and implement app.pg_async_session to work across pgai_client and worker_client
+        yield
+        # TODO: use dependency.settings_provider for routes that require settings
+
+    return lifespan
+
+
+def create_app(settings: Settings = None):
+    settings = settings or Settings()
+    lifespan = lifecycle_provider(settings)
+
+    app = FastAPI(lifespan=lifespan, title="llama-pg", version="0.1.0")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
-    await worker_client.create_table_if_not_exists()
-    target_tables = await worker_client.fetch_target_tables()
-    new_documents_to_process = await worker_client.check_new_documents(target_tables)
-    if len(new_documents_to_process) > 0:
-        parsed_documents, schemas_tables = await worker_client.parse_documents(
-            new_documents_to_process
-        )
-        await worker_client.upload_parsed_documents(parsed_documents, schemas_tables)
-    else:
-        logger.info("Found no new documents to parse")
 
+    app.include_router(document_router)
+    app.include_router(project_router)
+    app.include_router(retreival_router)
+    app.include_router(system_router)
 
-async def parser_runner(ctx):
-    await watch_target_tables()
+    return app

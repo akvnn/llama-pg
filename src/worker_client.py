@@ -1,5 +1,10 @@
 import sys
 import asyncio
+import uuid
+
+from src.models.document import DocumentDetail
+from src.models.pagination import PaginationResponse
+from src.models.system import SystemResponse
 
 # Set Windows-compatible event loop policy
 if sys.platform == "win32":
@@ -278,3 +283,22 @@ class WorkerClient:
     async def get_all_projects(self):
         target_tables = await self.fetch_target_tables()
         return [table[0] for table in target_tables]
+
+    async def get_recent_documents_info(
+        self, projects: list, skip: int, limit: int
+    ) -> PaginationResponse:
+        pass
+
+    async def get_document_by_id(
+        self, project_name: str, document_id: uuid.UUID
+    ) -> DocumentDetail:
+        pass
+
+    async def get_projects_info(self, projects: list) -> PaginationResponse:
+        pass
+
+    async def get_stats(projects: list) -> SystemResponse:
+        pass
+
+    async def get_errors(projects: list) -> SystemResponse:
+        pass
