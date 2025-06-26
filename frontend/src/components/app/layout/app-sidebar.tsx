@@ -8,7 +8,7 @@ import {
   Files 
 } from "lucide-react"
 
-import { NavMain } from "@/components/app/nav-main"
+import { NavMain } from "@/components/app/layout/nav-main"
 import {
   Sidebar,
   SidebarContent,
