@@ -77,6 +77,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DocumentsTableCellViewer } from "../documents-table/documents-table-cell-viewer";
 
 export const schema = z.object({
   id: z.number(),
@@ -126,7 +127,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
       );
     },
     cell: ({ row }) => {
-      return <div className="lowercase">{row.getValue("title")}</div>;
+      return <DocumentsTableCellViewer item={row.original} />;
     },
     enableSorting: true,
     enableGlobalFilter: true,
@@ -233,7 +234,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
-export function RecentDocumentsTable({
+export function DocumentsTable({
   data: initialData,
 }: {
   data: z.infer<typeof schema>[];

@@ -70,7 +70,7 @@ export function DashbaordCards() {
           </CardHeader>
         </Card>
       ))}
-      <Card className="@container/card col-span-full col-start-2 !bg-linear-to-tr">
+      <Card className="@container/card col-span-full sm:col-start-2  !bg-linear-to-tr">
         <CardHeader>
           <CardTitle className="text-xl font-semibold tabular-nums @[250px]/card:text-xl">
             System Status
