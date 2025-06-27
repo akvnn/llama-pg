@@ -24,10 +24,14 @@ export function DocumentsTableCellViewer({
   item: z.infer<typeof schema>;
 }) {
   const isMobile = useIsMobile();
+
   return (
     <Drawer handleOnly direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">
+        <Button
+          variant="link"
+          className="text-foreground w-fit px-0 text-left cursor-pointer"
+        >
           {item.title}
         </Button>
       </DrawerTrigger>
@@ -44,12 +48,22 @@ export function DocumentsTableCellViewer({
           <ResizableHandle withHandle className="hidden md:flex" />
           <ResizablePanel className="bg-white min-w-full md:min-w-[70%] lg:min-w-[40%] !overflow-y-auto">
             <DrawerHeader className="gap-1">
-              <DrawerTitle>{item.title}</DrawerTitle>
+              <DrawerTitle className="text-2xl">
+                {item.title.split(".")[0]}
+              </DrawerTitle>
               <DrawerDescription>
                 Style this the way you want zain. (brief text)
               </DrawerDescription>
             </DrawerHeader>
-            <div>HEAVY TEXT and components</div>
+            <div className="flex-1 h-5/6 p-4">
+              {
+                <iframe
+                  src={"sample-report.pdf"}
+                  className="w-full h-full border-0 rounded-lg"
+                  title={item.title}
+                />
+              }
+            </div>
             <DrawerFooter className="flex flex-row gap-3 flex-wrap">
               {/** TODO: Make buttons fixed size */}
               <Button className="grow">Submit</Button>

@@ -19,7 +19,7 @@ export default function RecentDocuments() {
         data={[
           {
             id: 1,
-            title: "readme.pdf",
+            title: "sample-report.pdf",
             project: "cars",
             status: "embedded",
             size: "12 MB",
