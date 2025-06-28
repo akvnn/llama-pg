@@ -47,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload
+    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload # remove reload for prod
     container_name: llama-pg-api
     ports:
       - ${API_PORT:-8000}:${API_PORT:-8000}

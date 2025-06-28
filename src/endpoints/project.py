@@ -34,6 +34,7 @@ async def create_project(request: ProjectRequest):
         await pgai_client.define_schema(
             schema_name=project_name, table_name=table_name
         )  # TODO:, make the below 3 functions a transaction
+        # TODO, create new table for project's info (e.g., description)
         await worker_client.create_table_if_not_exists(
             schema_name=project_name, table_name=table_name
         )
@@ -76,6 +77,8 @@ async def get_projects_info(
     """Endpoint to retrieve one or all projects' information with pagination"""
     try:
         project_name = params.project_name
+        skip = pagination.skip
+        limit = pagination.limit
         if params.project_name:
             project_exists = await worker_client.check_project_exists(
                 schema_name=project_name
@@ -86,14 +89,22 @@ async def get_projects_info(
                     content={"message": f"Project '{project_name}' does not exist."},
                 )
             projects = [project_name]
+            total_projects = len(projects)
         else:
-            skip = pagination.skip
-            limit = pagination.limit
             all_projects = (
                 await worker_client.get_all_projects()
             )  # TODO: move pagination inside the get_all_projects
+            total_projects = len(all_projects)
             projects = all_projects[skip : skip + limit]
         resp = await worker_client.get_projects_info(projects=projects)
+
+        resp.page = (skip // limit) + 1
+        resp.per_page = pagination.limit
+        resp.total_pages = (total_projects + limit - 1) // limit
+        resp.has_next = skip + limit < total_projects
+        resp.has_previous = skip > 0
+        resp.total_count = total_projects
+
         return resp
     except HTTPException:
         raise

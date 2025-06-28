@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -6,7 +5,7 @@ class ProjectRequest(BaseModel):
     """Base document model"""
 
     project_name: str = Field(..., description="Project name")
-    table_name: Optional[str] = Field("wiki", description="Table name")
+    table_name: str | None = Field(default="wiki", description="Table name")
 
     @field_validator("project_name")
     @classmethod
@@ -27,6 +26,6 @@ class RAGRequest(BaseModel):
     """RAG request model"""
 
     project_name: str = Field(..., description="Project name")
-    table_name: Optional[str] = Field("wiki_embedding", description="Table name")
+    table_name: str | None = Field("wiki_embedding", description="Table name")
     query: str = Field(..., description="Query string")
-    limit: Optional[int] = Field(5, ge=1, description="Number of results to return")
+    limit: int | None = Field(5, ge=1, description="Number of results to return")

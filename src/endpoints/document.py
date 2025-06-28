@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from typing import Optional
 from fastapi.responses import JSONResponse
 from src.models.document import DocumentDetail, DocumentParamsRequest
 from src.models.pagination import (
@@ -31,7 +30,7 @@ pgai_client = PGAIClient()
 async def upload_document(
     document: UploadFile = File(..., description="Uploaded document file"),
     project_name: str = Form(..., description="Project name"),
-    table_name: Optional[str] = Form("wiki", description="Table name"),
+    table_name: str | None = Form("wiki", description="Table name"),
 ):
     try:
         document_bytes = await document.read()

@@ -1,4 +1,3 @@
-from typing import Optional
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator
 
@@ -23,7 +22,7 @@ def get_pagination_params(
 class ParamRequest(BaseModel):
     """Base param model"""
 
-    project_name: Optional[str] = None
+    project_name: str | None = None
 
     @field_validator("project_name")
     @classmethod
@@ -35,9 +34,9 @@ class ParamRequest(BaseModel):
 
 class PaginationResponse(BaseModel):
     items: list[ProjectInfo | DocumentInfo]
-    total: Optional[int]
-    page: Optional[int]
-    per_page: Optional[int]
+    total_count: int | None = None
+    page: int | None = None
+    per_page: int | None = None
     total_pages: int
     has_next: bool
     has_previous: bool

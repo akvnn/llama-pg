@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from src.models.pagination import ParamRequest
-from src.models.system import SystemResponse
+from src.models.system import StatInfo, SystemResponse
 from src.pgai_client import PGAIClient
 from src.worker_client import WorkerClient
 from src.lp_client import LlamaParseClient
@@ -21,27 +21,11 @@ worker_client = WorkerClient(
 pgai_client = PGAIClient()
 
 
-@router.get(
-    "/errors", response_model=SystemResponse
-)  # TODO: convert errors endpoint to use pagination if needed
-async def get_errors(params: ParamRequest = Depends()):
+@router.get("/errors", response_model=SystemResponse)
+async def get_errors():
     """Endpoint to retrieve errors for a project (or all)"""
     try:
-        project_name = params.project_name
-        if params.project_name:
-            project_exists = await worker_client.check_project_exists(
-                schema_name=project_name
-            )
-            if not project_exists:
-                return JSONResponse(
-                    status_code=404,
-                    content={"message": f"Project '{project_name}' does not exist."},
-                )
-            projects = [project_name]
-        else:
-            all_projects = await worker_client.get_all_projects()
-            projects = all_projects
-        resp = await worker_client.get_errors(projects=projects)
+        resp = await worker_client.get_errors()
         return resp
     except HTTPException:
         raise
@@ -52,7 +36,7 @@ async def get_errors(params: ParamRequest = Depends()):
         )
 
 
-@router.get("/stats", response_model=SystemResponse)
+@router.get("/stats", response_model=StatInfo)
 async def get_stats(params: ParamRequest = Depends()):
     """Endpoint to retrieve system stats for a project (or all)"""
     try:
