@@ -362,7 +362,7 @@ class WorkerClient:
                 table_name = "wiki"  # TODO: make table name dynamic
                 await cur.execute(
                     f"""
-                            SELECT file_path, status, created_at, updated_at, parsed_document, summary FROM {project_name}.parser_{table_name}
+                            SELECT file_path, status, created_at, updated_at, parsed_document, file_bytes, summary FROM {project_name}.parser_{table_name}
                             WHERE document_id = %s;
                             """,
                     (document_id,),
@@ -370,9 +370,15 @@ class WorkerClient:
                 document = await cur.fetchone()
                 if not document:
                     raise HTTPException(status_code=404, detail="Document not found")
-                file_path, status, created_at, updated_at, parsed_document, summary = (
-                    document
-                )
+                (
+                    file_path,
+                    status,
+                    created_at,
+                    updated_at,
+                    parsed_document,
+                    file_bytes,
+                    summary,
+                ) = document
                 if parsed_document:
                     parsed_document = pickle.loads(parsed_document)
                     parsed_markdown_text = (
@@ -392,6 +398,7 @@ class WorkerClient:
                     created_at=created_at,
                     updated_at=updated_at,
                     parsed_markdown_text=parsed_markdown_text,
+                    file_bytes=file_bytes,  # will be converted to base64
                     summary=summary if summary else "",
                 )
 

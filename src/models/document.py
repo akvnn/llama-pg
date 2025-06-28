@@ -1,3 +1,4 @@
+import base64
 import datetime
 import uuid
 from pydantic import BaseModel, field_validator
@@ -28,7 +29,15 @@ class DocumentDetail(BaseModel):
     created_at: datetime.datetime
     updated_at: datetime.datetime | None = None
     parsed_markdown_text: str | None = None
+    file_bytes: str
     summary: str | None = None
+
+    @field_validator("file_bytes", mode="before")
+    @classmethod
+    def encode_bytes_to_base64(cls, v):
+        if isinstance(v, bytes):
+            return base64.b64encode(v).decode("utf-8")
+        return v
 
 
 class DocumentParamsRequest(BaseModel):
