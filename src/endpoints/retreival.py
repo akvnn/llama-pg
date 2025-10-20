@@ -1,46 +1,46 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from loguru import logger
+from src.auth import get_current_user_id
+from src.depedency import get_pgai_client, get_worker_client
 from src.models.models import RAGRequest
 from src.pgai_client import PGAIClient
 from src.worker_client import WorkerClient
-from src.lp_client import LlamaParseClient
-from src.configuration import config
 
 router = APIRouter()
 
-# Initialize the clients
-if config.USE_LLAMA_PARSE:
-    parser_client = LlamaParseClient(auto_mode=config.LLAMA_PARSE_AUTO_MODE)
-else:
-    parser_client = None
-# Initialize the worker client with the parser client
-worker_client = WorkerClient(
-    parser_client, client_type=parser_client.__class__.__name__
-)
-pgai_client = PGAIClient()
-
 
 @router.post("/search")
-async def find_relevant_chunks(request: RAGRequest):
+async def find_relevant_chunks(
+    request: RAGRequest,
+    user_id: str = Depends(get_current_user_id),
+    worker_client: WorkerClient = Depends(get_worker_client),
+    pgai_client: PGAIClient = Depends(get_pgai_client),
+):
     """Endpoint to find relevant chunks from a query"""
-    project_name = request.project_name
+    project_id = request.project_id
+    organization_id = request.organization_id
     query = request.query
     limit = request.limit
-    table_name = request.table_name
     try:
-        project_exists = await worker_client.check_project_exists(
-            schema_name=project_name
+        project_exists = await worker_client.check_user_access_to_project(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            roles_allowed=["member", "admin", "owner"],
         )
         if not project_exists:
             return JSONResponse(
                 status_code=404,
-                content={"message": f"Project '{project_name}' does not exist."},
+                content={
+                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                },
             )
         results = await pgai_client.find_relevant_chunks(
             query=query,
             limit=limit,
-            schema_name=project_name,
-            table_name=table_name,
+            organization_id=organization_id,
+            project_id=project_id,
         )
         # Convert to serializable format
         serializable_results = []
@@ -48,9 +48,10 @@ async def find_relevant_chunks(request: RAGRequest):
             serializable_results.append(
                 {
                     "id": result.id,
-                    "url": result.url,
                     "title": result.title,
+                    "metadata": result.metadata,
                     "text": result.text,
+                    "project_id": result.project_id,
                     "chunk": result.chunk,
                     "distance": result.distance,
                 }
@@ -59,42 +60,54 @@ async def find_relevant_chunks(request: RAGRequest):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error performing search: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error performing search: {str(e)}",
+            detail="Error performing search",
         )
 
 
 @router.post("/rag")
-async def rag(request: RAGRequest):
+async def rag(
+    request: RAGRequest,
+    user_id: str = Depends(get_current_user_id),
+    worker_client: WorkerClient = Depends(get_worker_client),
+    pgai_client: PGAIClient = Depends(get_pgai_client),
+):
     """
     Endpoint to perform rag from a query
     Requires an LLM
     """
-    project_name = request.project_name
+    project_id = request.project_id
+    organization_id = request.organization_id
     query = request.query
     limit = request.limit
-    table_name = request.table_name
     try:
-        project_exists = await worker_client.check_project_exists(
-            schema_name=project_name
+        project_exists = await worker_client.check_user_access_to_project(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            roles_allowed=["member", "admin", "owner"],
         )
         if not project_exists:
             return JSONResponse(
                 status_code=404,
-                content={"message": f"Project '{project_name}' does not exist."},
+                content={
+                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                },
             )
         result = await pgai_client.rag_query(
             query=query,
             limit=limit,
-            schema_name=project_name,
-            table_name=table_name,
+            organization_id=organization_id,
+            project_id=project_id,
         )
         return JSONResponse(status_code=200, content={"data": result})
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error performing RAG: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error performing RAG: {str(e)}",
+            detail="Error performing RAG",
         )

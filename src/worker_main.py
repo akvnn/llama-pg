@@ -15,14 +15,18 @@ async def watch_target_tables():
     worker_client = WorkerClient(
         parser_client, client_type=parser_client.__class__.__name__
     )
-    target_tables = await worker_client.fetch_target_tables()
-    new_documents_to_process = await worker_client.check_new_documents(target_tables)
-    logger.debug(len(new_documents_to_process))
+    organizations_ids = await worker_client.get_organizations_ids()  # get all orgs
+    new_documents_to_process = await worker_client.check_new_documents(
+        organizations_ids
+    )
     if len(new_documents_to_process) > 0:
-        parsed_documents, schemas_tables = await worker_client.parse_documents(
-            new_documents_to_process
+        (
+            parsed_documents,
+            documents_organizations_ids,
+        ) = await worker_client.parse_documents(new_documents_to_process)
+        await worker_client.upload_parsed_documents(
+            parsed_documents, documents_organizations_ids
         )
-        await worker_client.upload_parsed_documents(parsed_documents, schemas_tables)
     else:
         logger.info("Found no new documents to parse")
 

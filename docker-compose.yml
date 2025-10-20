@@ -31,6 +31,7 @@ services:
      - POSTGRES_PASSWORD=password
     volumes:
       - pg_data:/home/postgres/pgdata/data
+      - ./init_psql.sql:/docker-entrypoint-initdb.d/init_psql.sql
     restart: always
     networks:
       - llama-pg-net
@@ -38,7 +39,7 @@ services:
     image: timescale/pgai-vectorizer-worker:latest
     environment:
       PGAI_VECTORIZER_WORKER_DB_URL: ${DB_URL}
-      OPENAI_API_KEY: ${VLLM_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       - postgres
     networks:
@@ -60,7 +61,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload
+    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload # remove reload for prod
     container_name: llama-pg-api
     ports:
       - ${API_PORT:-8000}:${API_PORT:-8000}

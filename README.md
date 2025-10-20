@@ -1,10 +1,10 @@
 # 🦙 llama-pg
 
-A production-ready RAG as a Service (RaaS) orchestrator that integrates **LlamaParse**, **pgai**, and **vLLM** _(the best of all worlds)_ for intelligent document parsing, vector embeddings generation, and RAG.
+A production-ready RAG as a Service (RaaS) orchestrator built on top of [**pgai**](https://github.com/timescale/pgai) for intelligent document parsing, vector embeddings generation, and RAG.
 
 ## 🚀 Features
 
-- **PDF Processing**: Automatic PDF parsing using LlamaParse with configurable auto-mode
+- **PDF Processing**: Automatic PDF parsing using LlamaParse (or any supported parser) with configurable auto-mode
 - **Vector Embeddings**: Built-in support for vLLM embeddings (e.g., BAAI/bge-m3) or OpenAI embeddings
 - **Admin Interface**: Easy-to-use admin panel for document management
 - **REST API**: Simple API endpoints for document insertion and retrieval
@@ -103,6 +103,13 @@ cd llama-pg
 
 Create a `.env` file in the root directory:
 
+Include the required `.env` variables:
+```env
+OPENAI_API_KEY=<your_openai_key>
+LLAMA_CLOUD_API_KEY=<your_llamaparse_api_key_here>
+```
+
+Additionally, all possible `.env` variables (including optional ones) are listed here:
 ```env
 # PostgreSQL Configuration
 DB_URL=<postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DBNAME}>
@@ -111,13 +118,17 @@ DB_POOL_MAX_SIZE=10
 DB_POOL_IDLE_TIMEOUT=300
 DB_POOL_LIFETIME_TIMEOUT=1800
 
+# Security Configuration
+JWT_EXPIRES_IN=3600
+JWT_SECRET_KEY=some_dummy_key
+
 # vLLM/OpenAI Configuration
-VLLM_API_KEY=some_dummy_key
-VLLM_EMBEDDING_MODEL=BAAI/bge-m3
-VLLM_EMBEDDING_HOST=<host_ip:host_port>
-VLLM_MODEL=<llm_name> # Optional
-VLLM_MODEL_HOST=<host_ip:host_port> # Optional
-# Note: set VLLM_EMBEDDING_HOST and VLLM_MODEL_HOST to empty to use OpenAI
+OPENAI_API_KEY=<your_openai_key>
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_MODEL=gpt-5
+USE_VLLM=False
+OPENAI_HOST=https://api.openai.com/v1
+# Note: to use vLLM, set USE_VLLM to True, OPENAI_HOST to <host_ip:host_port>, and change the OPENAI_EMBEDDING_MODEL and OPENAI_MODEL accordingly
 
 # Parser Configuration
 LLAMA_CLOUD_API_KEY=<your_llamaparse_api_key_here>
@@ -139,7 +150,7 @@ REDIS_ARQ_MAX_JOBS=10
 **Using Docker:**
 
 ```bash
-docker-compose up -d
+docker-compose up --build -d
 ```
 
 This will start:
@@ -149,7 +160,7 @@ This will start:
 - **Vectorizer Worker**: pgai vector processing
 - **API and Admin Panel**: API and admin panel to manage all services
 
-For local development instructions, see the [Development](#-development) section below (using either `uv` or `pip`).
+For local development instructions, see the [Development](#-development) section below (using `uv`).
 
 ## 📚 Usage
 
@@ -172,15 +183,7 @@ Access the admin panel at `http://localhost:8000/admin` to:
 
 **Using uv (recommended):**
 ```bash
-uv init
 uv sync
-```
-
-**OR Using pip:**
-```bash
-python -m venv venv
-source venv/Scripts/activate
-pip install -r requirements.txt
 ```
 
 ## 🤝 Contributing
