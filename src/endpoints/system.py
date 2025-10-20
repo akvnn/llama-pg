@@ -9,6 +9,7 @@ from loguru import logger
 
 router = APIRouter()
 
+
 @router.get("/errors", response_model=SystemResponse)
 async def get_errors(
     user_id: str = Depends(get_current_user_id),
@@ -17,7 +18,6 @@ async def get_errors(
 ):
     """Endpoint to retrieve errors for a project (or all)"""
     try:
-        
         user_has_access = await worker_client.check_user_access_to_organization(
             organization_id=params.organization_id,
             user_id=user_id,
@@ -41,6 +41,7 @@ async def get_errors(
             status_code=500,
             detail="Error retreiving errors",
         )
+
 
 @router.get("/stats", response_model=StatInfo)
 async def get_stats(
@@ -74,7 +75,9 @@ async def get_stats(
             )
             projects = all_projects
 
-        resp = await worker_client.get_stats(organization_id=organization_id, projects=projects)
+        resp = await worker_client.get_stats(
+            organization_id=organization_id, projects=projects
+        )
         return resp
     except HTTPException:
         raise

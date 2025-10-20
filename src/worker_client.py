@@ -31,7 +31,7 @@ class WorkerClient:
             async with conn.cursor() as cur:
                 try:
                     await cur.execute(
-                        f"""
+                        """
                         SELECT COUNT(*) FROM user_org 
                         WHERE user_id = %s AND org_id = %s AND role = ANY(%s);
                         """,
@@ -213,7 +213,9 @@ class WorkerClient:
             except Exception as e:
                 logger.error(f"Error parsing document: {e}")
                 return [], []
-        logger.info(f"Parsed {len(parsed_documents)} documents, {len(organizations_ids)} organizations")
+        logger.info(
+            f"Parsed {len(parsed_documents)} documents, {len(organizations_ids)} organizations"
+        )
         return parsed_documents, organizations_ids
 
     async def upload_parsed_documents(self, parsed_documents, organizations_ids):
@@ -338,7 +340,9 @@ class WorkerClient:
                 )
                 documents = await cur.fetchall()
                 column_names = [desc[0] for desc in cur.description]
-                documents_info = [DocumentInfo(**dict(zip(column_names, doc))) for doc in documents]
+                documents_info = [
+                    DocumentInfo(**dict(zip(column_names, doc))) for doc in documents
+                ]
 
                 total_pages = (total_count + limit - 1) // limit  # Ceiling division
                 current_page = (skip // limit) + 1
@@ -380,7 +384,7 @@ class WorkerClient:
                     status,
                     summary,
                     created_at,
-                    uploaded_by_user_id
+                    uploaded_by_user_id,
                 ) = document
                 if parsed_document:
                     parsed_document = pickle.loads(parsed_document)
@@ -403,7 +407,7 @@ class WorkerClient:
                     parsed_markdown_text=parsed_markdown_text,
                     file_bytes=document_bytes,  # will be converted to base64
                     summary=summary if summary else "",
-                    uploaded_by_user_id=uploaded_by_user_id
+                    uploaded_by_user_id=uploaded_by_user_id,
                 )
 
     async def get_projects_info(
@@ -450,14 +454,17 @@ class WorkerClient:
         await db.connect()
         async with db.connection() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(f"""
+                await cur.execute(
+                    f"""
                             SELECT status, COUNT(status) FROM "{organization_id}".document
                             WHERE project_id = ANY(%s)
                             GROUP BY status
-                            """, (projects,))
+                            """,
+                    (projects,),
+                )
 
                 results = await cur.fetchall()
-                
+
                 status_counts = {}
                 total_count = 0
                 for status, count in results:

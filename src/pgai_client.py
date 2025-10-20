@@ -24,7 +24,6 @@ os.environ["OPENAI_BASE_URL"] = config.OPENAI_BASE_URL
 
 
 class PGAIClient:
-
     def __init__(self, config: Settings = Settings()):
         self.config = config
 

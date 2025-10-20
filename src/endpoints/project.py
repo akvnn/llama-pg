@@ -8,10 +8,9 @@ from src.models.pagination import (
     ParamRequest,
     get_pagination_params,
 )
-from src.pgai_client import PGAIClient
 from src.worker_client import WorkerClient
 from src.auth import get_current_user_id
-from src.depedency import get_worker_client, get_pgai_client
+from src.depedency import get_worker_client
 
 router = APIRouter()
 
@@ -81,7 +80,7 @@ async def get_projects(
             )
         projects = await worker_client.get_all_projects(
             organization_id=request.organization_id
-        )   
+        )
         return JSONResponse(status_code=200, content={"data": projects})
     except HTTPException:
         raise

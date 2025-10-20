@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,11 +48,16 @@ def lifecycle_provider(settings: Settings):
                 )
             else:
                 app.parser_client = None
+
+            app.worker_client = WorkerClient(
+                app.parser_client, client_type=app.parser_client.__class__.__name__
+            )
+            app.pgai_client = PGAIClient()
+
             yield
         finally:
             await app.pool.close()
             logger.info("Shutting down application...")
-            
 
     return lifespan
 

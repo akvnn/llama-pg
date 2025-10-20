@@ -10,9 +10,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
     # PostgreSQL Configuration
-    DB_URL: str = (
-        "postgresql://postgres:password@postgres:5432/postgres"  # must follow the format: postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DBNAME}
-    )
+    DB_URL: str = "postgresql://postgres:password@postgres:5432/postgres"  # must follow the format: postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DBNAME}
     DB_POOL_MIN_SIZE: int = 5
     DB_POOL_MAX_SIZE: int = 10
     DB_POOL_IDLE_TIMEOUT: int = 300

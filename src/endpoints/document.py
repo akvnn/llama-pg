@@ -20,7 +20,7 @@ router = APIRouter()
 async def upload_document(
     user_id: str = Depends(get_current_user_id),
     document: UploadFile = File(..., description="Uploaded document file"),
-    organization_id: str = Form(..., description="Organization id"), 
+    organization_id: str = Form(..., description="Organization id"),
     project_id: str = Form(..., description="Project id"),
     document_name: Annotated[str | None, Form(description="Document title")] = None,
     metadata: Annotated[dict | None, Form(description="Additional metadata")] = None,

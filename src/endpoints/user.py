@@ -1,4 +1,3 @@
-import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from src.depedency import get_db_pool

@@ -1,8 +1,8 @@
-import asyncio
 from loguru import logger
 from src.configuration import config
 from src.lp_client import LlamaParseClient
 from src.worker_client import WorkerClient
+
 
 async def watch_target_tables():
     if config.USE_LLAMA_PARSE:
@@ -19,11 +19,11 @@ async def watch_target_tables():
     new_documents_to_process = await worker_client.check_new_documents(
         organizations_ids
     )
-    logger.debug(len(new_documents_to_process))
     if len(new_documents_to_process) > 0:
-        parsed_documents, documents_organizations_ids = await worker_client.parse_documents(new_documents_to_process)
-        logger.debug(parsed_documents)
-        logger.debug(documents_organizations_ids)
+        (
+            parsed_documents,
+            documents_organizations_ids,
+        ) = await worker_client.parse_documents(new_documents_to_process)
         await worker_client.upload_parsed_documents(
             parsed_documents, documents_organizations_ids
         )
