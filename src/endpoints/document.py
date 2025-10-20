@@ -1,5 +1,9 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
+from loguru import logger
+from src.auth import get_current_user_id
+from src.depedency import get_worker_client
 from src.models.document import DocumentDetail, DocumentParamsRequest
 from src.models.pagination import (
     PaginationParams,
@@ -7,122 +11,153 @@ from src.models.pagination import (
     ParamRequest,
     get_pagination_params,
 )
-from src.pgai_client import PGAIClient
 from src.worker_client import WorkerClient
-from src.lp_client import LlamaParseClient
-from src.configuration import config
 
 router = APIRouter()
-
-# Initialize the clients
-if config.USE_LLAMA_PARSE:
-    parser_client = LlamaParseClient(auto_mode=config.LLAMA_PARSE_AUTO_MODE)
-else:
-    parser_client = None
-# Initialize the worker client with the parser client
-worker_client = WorkerClient(
-    parser_client, client_type=parser_client.__class__.__name__
-)
-pgai_client = PGAIClient()
 
 
 @router.post("/upload_document")
 async def upload_document(
+    user_id: str = Depends(get_current_user_id),
     document: UploadFile = File(..., description="Uploaded document file"),
-    project_name: str = Form(..., description="Project name"),
-    table_name: str | None = Form("wiki", description="Table name"),
+    organization_id: str = Form(..., description="Organization id"), 
+    project_id: str = Form(..., description="Project id"),
+    document_name: Annotated[str | None, Form(description="Document title")] = None,
+    metadata: Annotated[dict | None, Form(description="Additional metadata")] = None,
+    worker_client: WorkerClient = Depends(get_worker_client),
 ):
     try:
+        # Validate if the user has access to the organization and project
+        project_exists = await worker_client.check_user_access_to_project(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            roles_allowed=["member", "admin", "owner"],
+        )
+        if not project_exists:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                },
+            )
         document_bytes = await document.read()
-        document_path = getattr(document, "filename", "uploaded_document")
-        document_title = getattr(
-            document, "title", document_path
-        )  # TODO: -> make metadata customizable as title will always resolve TODO:cument_path right now.
+        document_uploaded_name = document_name or getattr(
+            document, "filename", "uploaded_document"
+        )
+        document_metadata = metadata or getattr(document, "metadata", {})
+
         insert_object = {
-            "file_path": document_path,
-            "url": document_path,
-            "title": document_title,
-            "file_bytes": document_bytes,
+            "document_uploaded_name": document_uploaded_name,
+            "metadata": metadata or document_metadata,
+            "document_bytes": document_bytes,
         }
-        await worker_client.insert_into_table(
-            schema_name=project_name, table_name=table_name, insert_object=insert_object
+
+        document_id = await worker_client.insert_into_table(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            insert_object=insert_object,
         )
         return JSONResponse(
             status_code=200,
             content={
-                "message": f"Document '{document_title}' uploaded successfully to project '{project_name}'"
+                "message": "Document uploaded successfully",
+                "document_id": document_id,
             },
         )
     except Exception as e:
+        logger.error(f"Error uploading document: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={
-                "message": f"Error uploading document to project '{project_name}': {str(e)}"
-            },
+            content={"message": "Error uploading document to project"},
         )
 
 
 @router.get("/recent_documents_info", response_model=PaginationResponse)
 async def get_recent_documents_info(
+    user_id: str = Depends(get_current_user_id),
     pagination: PaginationParams = Depends(get_pagination_params),
     params: ParamRequest = Depends(),
+    worker_client: WorkerClient = Depends(get_worker_client),
 ):
     """
     Endpoint to retrieve information about the most recent documents for a project (or all).
     """
     try:
-        project_name = params.project_name
-        if params.project_name:
-            project_exists = await worker_client.check_project_exists(
-                schema_name=project_name
+        project_id = params.project_id
+        organization_id = params.organization_id
+        if params.project_id:
+            project_exists = await worker_client.check_user_access_to_project(
+                organization_id=organization_id,
+                project_id=project_id,
+                user_id=user_id,
+                roles_allowed=["member", "admin", "owner"],
             )
             if not project_exists:
                 return JSONResponse(
                     status_code=404,
-                    content={"message": f"Project '{project_name}' does not exist."},
+                    content={
+                        "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    },
                 )
-            projects = [project_name]
+            projects = [project_id]
         else:
-            all_projects = await worker_client.get_all_projects()  # No pagination for projects, either one or all. PaginationParams are for the documents below.
+            # TODO: check user has access to organization
+            all_projects = await worker_client.get_all_projects(
+                organization_id=organization_id
+            )  # No pagination for projects, either one or all. PaginationParams are for the documents below.
             projects = all_projects
 
         skip = pagination.skip
         limit = pagination.limit
         resp = await worker_client.get_recent_documents_info(
-            projects=projects, skip=skip, limit=limit
+            organization_id=organization_id, projects=projects, skip=skip, limit=limit
         )
         return resp
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error retrieving recent documents info: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving recent documents info: {str(e)}",
+            detail="Error retrieving recent documents info",
         )
 
 
 @router.get("/document", response_model=DocumentDetail)
-async def get_document(params: DocumentParamsRequest = Depends()):
+async def get_document(
+    user_id: str = Depends(get_current_user_id),
+    params: DocumentParamsRequest = Depends(),
+    worker_client: WorkerClient = Depends(get_worker_client),
+):
     """Endpoint to retrieve a specific document by ID for a project"""
     try:
-        project_name = params.project_name
+        project_id = params.project_id
+        organization_id = params.organization_id
         document_id = params.document_id
-        project_exists = await worker_client.check_project_exists(
-            schema_name=project_name
+        project_exists = await worker_client.check_user_access_to_project(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            roles_allowed=["member", "admin", "owner"],
         )
         if not project_exists:
             return JSONResponse(
                 status_code=404,
-                content={"message": f"Project '{project_name}' does not exist."},
+                content={
+                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                },
             )
         resp = await worker_client.get_document_by_id(
-            project_name=project_name, document_id=document_id
+            organization_id=organization_id, document_id=document_id
         )
         return resp
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error retrieving a specific document: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving a specific document: {str(e)}",
+            detail="Error retrieving a specific document",
         )

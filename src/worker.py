@@ -1,10 +1,8 @@
 from arq import cron
 
-from src.configuration import Settings
+from src.configuration import config as settings
 
-settings = Settings()
-
-
+# TODO: integrate pgai worker into the existing parser worker (1 container for both together)
 class WorkerSettings:
     cron_jobs = [
         cron(
