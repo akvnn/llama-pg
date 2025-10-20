@@ -1,4 +1,4 @@
-from llama_parse import LlamaParse
+from llama_cloud_services import LlamaParse
 from loguru import logger
 from src.configuration import config
 
