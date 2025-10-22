@@ -5,7 +5,8 @@ import {
   Folder,
   Crown,
   Activity,
-  Files 
+  Files,
+  UserPlus
 } from "lucide-react"
 
 import { NavMain } from "@/components/app/layout/nav-main"
@@ -44,6 +45,11 @@ const data = {
       title: "Activity",
       url: "/activity",
       icon: Activity ,
+    },
+    {
+      title: "Create User",
+      url: "/signup",
+      icon: UserPlus,
     },
   ],
 }
