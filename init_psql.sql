@@ -1,10 +1,9 @@
-
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    last_login TIMESTAMPTZ,
+    last_login TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS organizations (
@@ -20,3 +19,12 @@ CREATE TABLE IF NOT EXISTS user_org (
     role TEXT NOT NULL,
     joined_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+INSERT INTO users (username, password_hash, created_at, last_login)
+VALUES (
+    'admin',
+    '$2b$12$K8tGZhooHIGU4TEBmvJfNOwry5wc01j3fZj9wCtRX5OqB77GSZ9ta',
+    NOW(),
+    NOW()
+)
+ON CONFLICT (username) DO NOTHING;

@@ -4,12 +4,12 @@ services:
       context: ./frontend
     container_name: react-frontend
     ports:
-        - "5173:5173"
+      - "5173:5173"
     volumes:
-        - ./frontend:/app
-        - /app/node_modules
+      - ./frontend:/app
+      - /app/node_modules
     environment:
-        NODE_ENV: development
+      NODE_ENV: development
     stdin_open: true
     tty: true
   redis:
@@ -25,10 +25,10 @@ services:
   postgres:
     image: timescale/timescaledb-ha:pg17
     container_name: timescaledb
-    ports: 
-     - 5432:5432
+    ports:
+      - 5437:5432
     environment:
-     - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=password
     volumes:
       - pg_data:/home/postgres/pgdata/data
       - ./init_psql.sql:/docker-entrypoint-initdb.d/init_psql.sql
@@ -45,7 +45,7 @@ services:
     networks:
       - llama-pg-net
   parser-worker:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     command: arq src.worker.WorkerSettings

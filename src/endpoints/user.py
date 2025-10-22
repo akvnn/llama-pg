@@ -33,8 +33,8 @@ async def login(body: UserRequest, pool=Depends(get_db_pool)):
                 await cur.execute(
                     """
                         SELECT u.id, u.username, u.password_hash,
-                        ARRAY_AGG(uo.id) as user_org_ids
-                        FROM users u 
+                        COALESCE(ARRAY_AGG(uo.id) FILTER (WHERE uo.id IS NOT NULL), ARRAY[]::uuid[]) as user_org_ids
+                        FROM users u
                         LEFT JOIN user_org uo ON u.id = uo.user_id
                         WHERE u.username = %s
                         GROUP BY u.id, u.username, u.password_hash;
