@@ -24,13 +24,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  CircleCheck,
   EllipsisVertical,
   GripVertical,
   Columns2,
-  CloudUpload,
-  FileCheck2,
-  FileCog,
+  FileText,
   ArrowUpDown,
 } from "lucide-react";
 import {
@@ -77,16 +74,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { DocumentsTableCellViewer } from "../documents-table/documents-table-cell-viewer";
 import axiosInstance from "@/axios";
 
 export const schema = z.object({
-  document_uploaded_name: z.string(),
-  metadata: z.record(z.unknown()),
-  status: z.string(),
-  uploaded_by_user_id: z.string(),
-  created_at: z.string(),
   project_name: z.string(),
+  number_of_documents: z.number(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+  description: z.string().nullable(),
 });
 
 interface PaginationResponse {
@@ -99,7 +94,6 @@ interface PaginationResponse {
   has_previous: boolean;
 }
 
-// Create a separate component for the drag handle
 function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({
     id,
@@ -119,81 +113,63 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
-const getStatusIcon = (status: string) => {
-  const normalizedStatus = status.toLowerCase();
-  if (
-    normalizedStatus.includes("ready") ||
-    normalizedStatus.includes("embedded")
-  ) {
-    return (
-      <CircleCheck
-        className="fill-green-500 dark:fill-green-400"
-        color="green"
-      />
-    );
-  } else if (normalizedStatus.includes("upload") || normalizedStatus.includes("pending")) {
-    return <CloudUpload color="orange" />;
-  } else if (
-    normalizedStatus.includes("pars") ||
-    normalizedStatus.includes("embed") ||
-    normalizedStatus.includes("queued")
-  ) {
-    return <FileCheck2 color="blue" />;
-  }
-  return <FileCog color="gray" />;
-};
-
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     id: "drag",
     header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.document_uploaded_name} />,
+    cell: ({ row }) => <DragHandle id={row.original.project_name} />,
   },
   {
-    accessorKey: "document_uploaded_name",
+    accessorKey: "project_name",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Document Name
+          Project Name
           <ArrowUpDown />
         </Button>
       );
     },
     cell: ({ row }) => {
-      return <DocumentsTableCellViewer item={row.original} />;
+      return (
+        <span className="font-medium">{row.original.project_name}</span>
+      );
     },
     enableSorting: true,
     enableGlobalFilter: true,
     enableHiding: false,
   },
   {
-    accessorKey: "project_name",
-    header: "Project",
+    accessorKey: "description",
+    header: "Description",
     cell: ({ row }) => {
-      return row.original.project_name;
+      return (
+        <span className="max-w-xs truncate block">
+          {row.original.description || "No description"}
+        </span>
+      );
     },
     enableGlobalFilter: true,
   },
   {
-    accessorKey: "status",
+    accessorKey: "number_of_documents",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Status
+          Documents
           <ArrowUpDown />
         </Button>
       );
     },
     cell: ({ row }) => (
       <Badge variant="outline" className="text-muted-foreground px-1.5">
-        {getStatusIcon(row.original.status)}
-        {row.original.status}
+        <FileText className="w-3 h-3" />
+        {row.original.number_of_documents}
       </Badge>
     ),
     enableSorting: true,
@@ -201,10 +177,24 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     accessorKey: "created_at",
-    header: () => "Uploaded At",
+    header: () => "Created At",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {new Date(row.original.created_at).toLocaleDateString()}
+        {row.original.created_at
+          ? new Date(row.original.created_at).toLocaleDateString()
+          : "N/A"}
+      </span>
+    ),
+    enableGlobalFilter: false,
+  },
+  {
+    accessorKey: "updated_at",
+    header: () => "Updated At",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.updated_at
+          ? new Date(row.original.updated_at).toLocaleDateString()
+          : "N/A"}
       </span>
     ),
     enableGlobalFilter: false,
@@ -226,7 +216,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         <DropdownMenuContent align="end" className="w-32">
           <DropdownMenuItem>Edit</DropdownMenuItem>
           <DropdownMenuItem>Copy</DropdownMenuItem>
-          <DropdownMenuItem>Download</DropdownMenuItem>
+          <DropdownMenuItem>View Documents</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
         </DropdownMenuContent>
@@ -237,7 +227,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.document_uploaded_name,
+    id: row.original.project_name,
   });
 
   return (
@@ -260,7 +250,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
-export function DocumentsTable({ limit }: { limit?: number }) {
+export function ProjectsTable({ limit }: { limit?: number }) {
   const [data, setData] = React.useState<z.infer<typeof schema>[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -282,11 +272,11 @@ export function DocumentsTable({ limit }: { limit?: number }) {
   );
 
   React.useEffect(() => {
-    const fetchDocuments = async () => {
+    const fetchProjects = async () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get<PaginationResponse>(
-          "/recent_documents_info",
+          "/projects_info",
           {
             params: {
               page: 1,
@@ -297,17 +287,17 @@ export function DocumentsTable({ limit }: { limit?: number }) {
         );
         setData(response.data.items);
       } catch (error) {
-        console.error("Failed to fetch documents:", error);
+        console.error("Failed to fetch projects:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDocuments();
+    fetchProjects();
   }, [limit]);
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ document_uploaded_name }) => document_uploaded_name) || [],
+    () => data?.map(({ project_name }) => project_name) || [],
     [data]
   );
 
@@ -325,7 +315,7 @@ export function DocumentsTable({ limit }: { limit?: number }) {
       pagination,
       globalFilter,
     },
-    getRowId: (row) => row.document_uploaded_name,
+    getRowId: (row) => row.project_name,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -357,7 +347,7 @@ export function DocumentsTable({ limit }: { limit?: number }) {
         <Table>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 Loading...
               </TableCell>
             </TableRow>
@@ -371,7 +361,7 @@ export function DocumentsTable({ limit }: { limit?: number }) {
     <>
       <div className="flex items-center justify-between">
         <Input
-          placeholder="Filter Projects or Documents..."
+          placeholder="Filter Projects..."
           value={globalFilter ?? ""}
           onChange={(e) => table.setGlobalFilter(String(e.target.value))}
           className="max-w-60 sm:max-w-sm"
@@ -382,7 +372,6 @@ export function DocumentsTable({ limit }: { limit?: number }) {
               <Button variant="outline" size="sm">
                 <Columns2 />
                 <span className="hidden lg:inline">Columns</span>
-                <span className="lg:hidden">Columns</span>
                 <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
@@ -464,10 +453,6 @@ export function DocumentsTable({ limit }: { limit?: number }) {
         </DndContext>
       </div>
       <div className="flex items-center justify-between px-4">
-        {/*  <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div> */}
         <div className="flex w-full items-center gap-8 lg:w-fit ms-auto">
           <div className="hidden items-center gap-2 lg:flex">
             <Label htmlFor="rows-per-page" className="text-sm font-medium">
