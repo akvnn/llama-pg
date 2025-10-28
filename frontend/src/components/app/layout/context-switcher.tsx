@@ -124,7 +124,6 @@ export function ContextSwitcher() {
         );
         setProjects(response.data.items);
 
-        // Set selected project if exists
         if (response.data.items.length > 0) {
           if (currentProject) {
             const project = response.data.items.find(
