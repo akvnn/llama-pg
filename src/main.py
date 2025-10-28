@@ -7,7 +7,8 @@ from src.endpoints.document import router as document_router
 from src.endpoints.project import router as project_router
 from src.endpoints.retreival import router as retreival_router
 from src.endpoints.system import router as system_router
-from src.endpoints.user import router as user_router
+from src.endpoints.user import router as user_router, signup
+from src.models.user import UserRequest
 from src.configuration import config
 import psycopg
 from psycopg_pool import AsyncConnectionPool
@@ -22,6 +23,27 @@ from src.worker_client import WorkerClient
 # Create a connection pool to the database for efficient connection management
 async def setup_pgvector_psycopg(conn: psycopg.AsyncConnection):
     await register_vector_async(conn)
+
+
+async def create_default_admin(pool: AsyncConnectionPool):
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT id FROM users WHERE username = %s;",
+                    (config.ADMIN_USERNAME,),
+                )
+                if await cur.fetchone():
+                    logger.info("Admin user already exists")
+                    return
+
+        await signup(
+            UserRequest(username=config.ADMIN_USERNAME, password=config.ADMIN_PASSWORD),
+            pool,
+        )
+        logger.info(f"Default admin user '{config.ADMIN_USERNAME}' created")
+    except Exception as e:
+        logger.error(f"Error creating admin user: {str(e)}")
 
 
 def lifecycle_provider(settings: Settings):
@@ -40,6 +62,9 @@ def lifecycle_provider(settings: Settings):
             )
             pgai.install(config.DB_URL)
             await app.pool.open()
+
+            # Create default admin user
+            await create_default_admin(app.pool)
 
             # Initialize the clients
             if config.USE_LLAMA_PARSE:

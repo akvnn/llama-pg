@@ -1,15 +1,35 @@
 import axiosInstance from "../axios";
 
+const JWT_EXPIRES_IN = parseInt(import.meta.env.VITE_JWT_EXPIRES_IN || "1296000");
+
 export const setToken = (token: string): void => {
   localStorage.setItem("auth_token", token);
+  localStorage.setItem("auth_token_timestamp", Date.now().toString());
+};
+
+export const isTokenExpired = (): boolean => {
+  const timestamp = localStorage.getItem("auth_token_timestamp");
+  if (!timestamp) return true;
+
+  const tokenAge = (Date.now() - parseInt(timestamp)) / 1000;
+  return tokenAge >= JWT_EXPIRES_IN;
 };
 
 export const getToken = (): string | null => {
-  return localStorage.getItem("auth_token");
+  const token = localStorage.getItem("auth_token");
+  if (!token) return null;
+
+  if (isTokenExpired()) {
+    removeToken();
+    return null;
+  }
+
+  return token;
 };
 
 export const removeToken = (): void => {
   localStorage.removeItem("auth_token");
+  localStorage.removeItem("auth_token_timestamp");
 };
 
 export const setUser = (username: string, userOrgIds: string[]): void => {

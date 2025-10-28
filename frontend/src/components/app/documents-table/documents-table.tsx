@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useMemo } from "react";
+import * as React from "react";
 import {
   closestCenter,
   DndContext,
@@ -24,10 +24,13 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  CircleCheck,
   EllipsisVertical,
   GripVertical,
   Columns2,
-  FileText,
+  CloudUpload,
+  FileCheck2,
+  FileCog,
   ArrowUpDown,
 } from "lucide-react";
 import {
@@ -74,16 +77,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DocumentsTableCellViewer } from "./documents-table-cell-viewer";
 
 export const schema = z.object({
+  document_id: z.string(),
+  document_uploaded_name: z.string(),
+  metadata: z.record(z.unknown()),
+  status: z.string(),
+  uploaded_by_user_id: z.string(),
+  created_at: z.string(),
   project_id: z.string(),
   project_name: z.string(),
-  number_of_documents: z.number(),
-  created_at: z.string().nullable(),
-  updated_at: z.string().nullable(),
-  description: z.string().nullable(),
+  organization_id: z.string(),
 });
 
+// Create a separate component for the drag handle
 function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({
     id,
@@ -103,62 +111,76 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
+const getStatusIcon = (status: string) => {
+  if (status === "Ready for Search") {
+    return (
+      <CircleCheck
+        className="fill-green-500 dark:fill-green-400"
+        color="green"
+      />
+    );
+  } else if (status === "Pending") {
+    return <CloudUpload color="orange" />;
+  } else if (
+    status === "Queued for Parsing" ||
+    status === "Queued for Embedding"
+  ) {
+    return <FileCheck2 color="blue" />;
+  }
+  return <FileCog color="gray" />;
+};
+
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     id: "drag",
     header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.project_name} />,
+    cell: ({ row }) => <DragHandle id={row.original.document_uploaded_name} />,
   },
   {
-    accessorKey: "project_name",
+    accessorKey: "document_uploaded_name",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Project Name
+          Document Name
           <ArrowUpDown />
         </Button>
       );
     },
     cell: ({ row }) => {
-      console.log("Rendering project name:", row.original.project_name);
-      return <span className="font-medium">{row.original.project_name}</span>;
+      return <DocumentsTableCellViewer item={row.original} />;
     },
     enableSorting: true,
     enableGlobalFilter: true,
     enableHiding: false,
   },
   {
-    accessorKey: "description",
-    header: "Description",
+    accessorKey: "project_name",
+    header: "Project",
     cell: ({ row }) => {
-      return (
-        <span className="max-w-xs truncate block">
-          {row.original.description || "No description"}
-        </span>
-      );
+      return row.original.project_name;
     },
     enableGlobalFilter: true,
   },
   {
-    accessorKey: "number_of_documents",
+    accessorKey: "status",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Documents
+          Status
           <ArrowUpDown />
         </Button>
       );
     },
     cell: ({ row }) => (
       <Badge variant="outline" className="text-muted-foreground px-1.5">
-        <FileText className="w-3 h-3" />
-        {row.original.number_of_documents}
+        {getStatusIcon(row.original.status)}
+        {row.original.status}
       </Badge>
     ),
     enableSorting: true,
@@ -166,24 +188,10 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     accessorKey: "created_at",
-    header: () => "Created At",
+    header: () => "Uploaded At",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.created_at
-          ? new Date(row.original.created_at).toLocaleDateString()
-          : "N/A"}
-      </span>
-    ),
-    enableGlobalFilter: false,
-  },
-  {
-    accessorKey: "updated_at",
-    header: () => "Updated At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.original.updated_at
-          ? new Date(row.original.updated_at).toLocaleDateString()
-          : "N/A"}
+        {new Date(row.original.created_at).toLocaleDateString()}
       </span>
     ),
     enableGlobalFilter: false,
@@ -205,7 +213,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         <DropdownMenuContent align="end" className="w-32">
           <DropdownMenuItem>Edit</DropdownMenuItem>
           <DropdownMenuItem>Copy</DropdownMenuItem>
-          <DropdownMenuItem>View Documents</DropdownMenuItem>
+          <DropdownMenuItem>Download</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
         </DropdownMenuContent>
@@ -216,7 +224,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.project_name,
+    id: row.original.document_uploaded_name,
   });
 
   return (
@@ -239,41 +247,42 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
-export default function ProjectsTable({
-  data: externalData,
-  loading,
-  limit,
-}: {
+export const DocumentsTable: React.FC<{
   data: z.infer<typeof schema>[];
   loading: boolean;
   limit?: number;
-}) {
-  const [data, setData] = useState<z.infer<typeof schema>[]>(externalData);
-  const [rowSelection, setRowSelection] = useState({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState({
+}> = ({ data: externalData, loading, limit }) => {
+  const [data, setData] =
+    React.useState<z.infer<typeof schema>[]>(externalData);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: limit || 10,
   });
-
-  const [globalFilter, setGlobalFilter] = useState<[]>([]);
-  const sortableId = useId();
+  const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     setData(externalData);
   }, [externalData]);
 
-  const dataIds = useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ project_name }) => project_name) || [],
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () =>
+      data?.map(({ document_uploaded_name }) => document_uploaded_name) || [],
     [data]
   );
+
+  const [globalFilter, setGlobalFilter] = React.useState<[]>([]);
 
   const table = useReactTable({
     data,
@@ -287,7 +296,7 @@ export default function ProjectsTable({
       pagination,
       globalFilter,
     },
-    getRowId: (row) => row.project_name,
+    getRowId: (row) => row.document_uploaded_name,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -319,7 +328,7 @@ export default function ProjectsTable({
         <Table>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={6} className="h-24 text-center">
                 Loading...
               </TableCell>
             </TableRow>
@@ -333,7 +342,7 @@ export default function ProjectsTable({
     <>
       <div className="flex items-center justify-between">
         <Input
-          placeholder="Filter Projects..."
+          placeholder="Filter Projects or Documents..."
           value={globalFilter ?? ""}
           onChange={(e) => table.setGlobalFilter(String(e.target.value))}
           className="max-w-60 sm:max-w-sm"
@@ -344,6 +353,7 @@ export default function ProjectsTable({
               <Button variant="outline" size="sm">
                 <Columns2 />
                 <span className="hidden lg:inline">Columns</span>
+                <span className="lg:hidden">Columns</span>
                 <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
@@ -425,6 +435,10 @@ export default function ProjectsTable({
         </DndContext>
       </div>
       <div className="flex items-center justify-between px-4">
+        {/*  <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div> */}
         <div className="flex w-full items-center gap-8 lg:w-fit ms-auto">
           <div className="hidden items-center gap-2 lg:flex">
             <Label htmlFor="rows-per-page" className="text-sm font-medium">
@@ -499,4 +513,4 @@ export default function ProjectsTable({
       </div>
     </>
   );
-}
+};

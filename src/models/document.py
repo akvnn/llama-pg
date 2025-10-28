@@ -39,12 +39,15 @@ class DocumentStatus(str, Enum):
 
 
 class DocumentInfo(BaseModel):
+    document_id: uuid.UUID
     document_uploaded_name: str
     metadata: dict
     status: DocumentStatus
     uploaded_by_user_id: uuid.UUID
     created_at: datetime.datetime
+    project_id: uuid.UUID
     project_name: str
+    organization_id: str
 
 
 class DocumentDetail(BaseModel):

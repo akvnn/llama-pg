@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getToken, getUser, login, logout, signup } from "../lib/auth";
+import { useOrganizationStore } from "@/hooks/use-organization";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -22,6 +23,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     userOrgIds: string[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const setCurrentOrganization = useOrganizationStore(
+    (state) => state.setCurrentOrganization
+  );
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (token && userData) {
       setIsAuthenticated(true);
       setUser(userData);
+      setCurrentOrganization(user?.userOrgIds[0] || null);
     }
 
     setLoading(false);

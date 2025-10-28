@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,9 +18,7 @@ import {
   schema,
 } from "@/components/app/documents-table/documents-table";
 import { useOrganizationStore } from "@/hooks/use-organization";
-import { useProjectStore } from "@/hooks/use-project";
 import { z } from "zod";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Project {
   project_id: string;
@@ -38,21 +37,20 @@ interface PaginationResponse {
   has_previous: boolean;
 }
 
-export default function Documents() {
+export default function ProjectDocuments() {
+  const { projectId } = useParams<{ projectId: string }>();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState<z.infer<typeof schema>[]>([]);
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
-
   const currentOrganization = useOrganizationStore(
     (state) => state.currentOrganization
   );
-  const currentProject = useProjectStore((state) => state.currentProject);
 
   const fetchProject = useCallback(async () => {
-    if (!currentOrganization || !currentProject) return;
+    if (!currentOrganization || !projectId) return;
 
     try {
       const response = await axiosInstance.get("/projects_info", {
@@ -63,16 +61,16 @@ export default function Documents() {
         },
       });
       const projectData = response.data.items.find(
-        (p: Project) => p.project_id === currentProject
+        (p: Project) => p.project_id === projectId
       );
       setProject(projectData || null);
     } catch (error) {
       console.error("Failed to fetch project:", error);
     }
-  }, [currentOrganization, currentProject]);
+  }, [currentOrganization, projectId]);
 
   const fetchDocuments = useCallback(async () => {
-    if (!currentOrganization || !currentProject) {
+    if (!currentOrganization || !projectId) {
       setLoading(false);
       return;
     }
@@ -99,7 +97,7 @@ export default function Documents() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization, currentProject, project?.project_name]);
+  }, [currentOrganization, projectId, project?.project_name]);
 
   useEffect(() => {
     fetchProject();
@@ -113,14 +111,14 @@ export default function Documents() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadFile || !currentOrganization || !currentProject) return;
+    if (!uploadFile || !currentOrganization || !projectId) return;
 
     try {
       setUploading(true);
       const formData = new FormData();
       formData.append("document", uploadFile);
       formData.append("organization_id", currentOrganization);
-      formData.append("project_id", currentProject);
+      formData.append("project_id", projectId);
       formData.append("document_name", uploadFile.name);
 
       await axiosInstance.post("/upload_document", formData, {
@@ -139,18 +137,6 @@ export default function Documents() {
       setUploading(false);
     }
   };
-
-  if (!currentProject) {
-    return (
-      <div className="flex flex-col gap-6 py-4 md:py-6 px-5">
-        <Alert>
-          <AlertDescription>
-            Please select a project from the sidebar to view documents
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   if (!project && !loading) {
     return (

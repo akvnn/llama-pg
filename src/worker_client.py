@@ -328,7 +328,7 @@ class WorkerClient:
                 total_count = (await cur.fetchone())[0]
                 await cur.execute(
                     f"""
-                    SELECT d.document_uploaded_name, d.metadata, d.status, d.uploaded_by_user_id, d.created_at, p.name as project_name
+                    SELECT d.id as document_id, d.document_uploaded_name, d.metadata, d.status, d.uploaded_by_user_id, d.created_at, d.project_id, p.name as project_name
                     FROM "{organization_id}".{TableNames.reserved_document_table_name} d
                     JOIN "{organization_id}".{TableNames.reserved_project_table_name} p
                     ON d.project_id = p.id
@@ -341,7 +341,7 @@ class WorkerClient:
                 documents = await cur.fetchall()
                 column_names = [desc[0] for desc in cur.description]
                 documents_info = [
-                    DocumentInfo(**dict(zip(column_names, doc))) for doc in documents
+                    DocumentInfo(**dict(zip(column_names, doc), organization_id=organization_id)) for doc in documents
                 ]
 
                 total_pages = (total_count + limit - 1) // limit  # Ceiling division
@@ -433,12 +433,15 @@ class WorkerClient:
 
                 projects_info_list = [
                     {
+                        "project_id": str(row[0]),
                         "project_name": row[1],
                         "number_of_documents": row[3],
                         "description": row[2] or "",
                     }
                     for row in results
                 ]
+
+                logger.info(f"Projects info list: {projects_info_list}")
 
         return PaginationResponse(
             items=projects_info_list,

@@ -4,6 +4,9 @@ import jwt
 from src.configuration import config
 from datetime import datetime, timedelta
 import bcrypt
+from dotenv import load_dotenv
+
+load_dotenv()
 
 security = HTTPBearer()
 

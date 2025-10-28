@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 
 export interface StatInfo {
-  queued_count: number;
-  parsed_count: number;
-  embedded_count: number;
+  total_count: number;
+  projects_count: number;
+  status_counts: Record<string, number>;
 }
 
 export interface Cards {
