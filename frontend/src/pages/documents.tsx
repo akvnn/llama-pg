@@ -122,6 +122,11 @@ export default function Documents() {
       formData.append("organization_id", currentOrganization);
       formData.append("project_id", currentProject);
       formData.append("document_name", uploadFile.name);
+      const metadata = {
+        title: uploadFile.name,
+        url: uploadFile.name,
+      };
+      formData.append("metadata", JSON.stringify(metadata));
 
       await axiosInstance.post("/upload_document", formData, {
         headers: {

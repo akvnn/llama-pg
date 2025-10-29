@@ -204,6 +204,7 @@ class WorkerClient:
                 with open(file_path, "wb") as f:
                     f.write(document.get("document_bytes"))
                 metadata = dict(document.get("metadata", {}))
+                metadata["id"] = str(document.get("id"))
                 parsed_document = await self.parser_client.aprocess_document(
                     file_path, extra_info=metadata
                 )
@@ -253,10 +254,11 @@ class WorkerClient:
                             await cur.execute(
                                 f"""
                                 UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
-                                SET processed = {DocumentStatus.QUEUED_EMBEDDING.value}, parsed_document = %s
+                                SET status = %s, parsed_document = %s
                                 WHERE id = %s;
                             """,
                                 (
+                                    DocumentStatus.QUEUED_EMBEDDING.value,
                                     pickle.dumps(parsed_document),
                                     doc_id,
                                 ),
@@ -265,8 +267,8 @@ class WorkerClient:
                             await cur.execute(
                                 f"""
                                 INSERT INTO "{organization_id}".{pgai_table_name} 
-                                (text, title, url)
-                                VALUES (%s, %s, %s);
+                                (text, title)
+                                VALUES (%s, %s);
                                 """,
                                 (
                                     getattr(parsed_document, "text", None)
@@ -278,13 +280,6 @@ class WorkerClient:
                                     if hasattr(parsed_document, "metadata")
                                     else parsed_document.get("metadata", {}).get(
                                         "title", None
-                                    ),
-                                    getattr(parsed_document, "metadata", {}).get(
-                                        "url", None
-                                    )
-                                    if hasattr(parsed_document, "metadata")
-                                    else parsed_document.get("metadata", {}).get(
-                                        "url", None
                                     ),
                                 ),
                             )

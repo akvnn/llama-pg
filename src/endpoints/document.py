@@ -12,6 +12,7 @@ from src.models.pagination import (
     get_pagination_params,
 )
 from src.worker_client import WorkerClient
+import json
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ async def upload_document(
     organization_id: str = Form(..., description="Organization id"),
     project_id: str = Form(..., description="Project id"),
     document_name: Annotated[str | None, Form(description="Document title")] = None,
-    metadata: Annotated[dict | None, Form(description="Additional metadata")] = None,
+    metadata: Annotated[str | None, Form(description="Additional metadata")] = None,
     worker_client: WorkerClient = Depends(get_worker_client),
 ):
     try:
@@ -45,11 +46,11 @@ async def upload_document(
         document_uploaded_name = document_name or getattr(
             document, "filename", "uploaded_document"
         )
-        document_metadata = metadata or getattr(document, "metadata", {})
+        document_metadata = json.loads(metadata) if metadata else {}
 
         insert_object = {
             "document_uploaded_name": document_uploaded_name,
-            "metadata": metadata or document_metadata,
+            "metadata": document_metadata,
             "document_bytes": document_bytes,
         }
 

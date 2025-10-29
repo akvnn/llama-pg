@@ -327,7 +327,7 @@ export function ContextSwitcher() {
               <SidebarMenuButton
                 size="lg"
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                disabled={projectsLoading || projects.length === 0}
+                disabled={projectsLoading}
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted">
                   <Folder className="size-4" />
