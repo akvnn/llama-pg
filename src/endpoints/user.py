@@ -78,6 +78,7 @@ async def signup(body: UserRequest, pool=Depends(get_db_pool)):
     try:
         username = body.username
         password = body.password
+        is_service_account = body.is_service_account
         async with pool.connection() as conn:
             async with conn.transaction():
                 async with conn.cursor() as cur:
@@ -93,14 +94,14 @@ async def signup(body: UserRequest, pool=Depends(get_db_pool)):
                             status_code=400,
                             detail="Username already exists",
                         )
-                    encrypted_password = hash_password(password)
+                    hashed_password = hash_password(password)
                     await cur.execute(
                         """
-                            INSERT INTO users (username, password_hash, created_at, last_login)
-                            VALUES (%s, %s, NOW(), NOW())
+                            INSERT INTO users (username, password_hash, is_service_account, created_at, last_login)
+                            VALUES (%s, %s, %s, NOW(), NOW())
                             RETURNING id;
                         """,
-                        (username, encrypted_password),
+                        (username, hashed_password, is_service_account),
                     )
                     user_result = await cur.fetchone()
                     if not user_result:
@@ -316,13 +317,67 @@ async def get_organization_users(
                         detail="Access denied",
                     )
 
-                # Fetch users in the organization
                 await cur.execute(
                     """
                     SELECT u.id, u.username, uo.role, uo.joined_at
                     FROM users u
                     JOIN user_org uo ON u.id = uo.user_id
-                    WHERE uo.org_id = %s;
+                    WHERE uo.org_id = %s AND u.is_service_account = FALSE;
+                    """,
+                    (org_id,),
+                )
+                users = await cur.fetchall()
+                return [
+                    OrganizationUserInfo(
+                        user_id=str(user[0]),
+                        username=user[1],
+                        role=user[2],
+                        joined_at=user[3],
+                    )
+                    for user in users
+                ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching organization users: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error fetching organization users",
+        )
+
+
+@router.get("/organization/{org_id}/sa", response_model=list[OrganizationUserInfo])
+async def get_organization_sas(
+    org_id: str, user_id: str = Depends(get_current_user_id), pool=Depends(get_db_pool)
+):
+    """
+    Endpoint to retrieve all service account users associated with a specific organization.
+    The user must be authenticated and a member of the organization.
+    """
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    SELECT 1
+                    FROM user_org
+                    WHERE org_id = %s AND user_id = %s;
+                    """,
+                    (org_id, user_id),
+                )
+                is_member = await cur.fetchone()
+                if not is_member:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Access denied",
+                    )
+
+                await cur.execute(
+                    """
+                    SELECT u.id, u.username, uo.role, uo.joined_at
+                    FROM users u
+                    JOIN user_org uo ON u.id = uo.user_id
+                    WHERE uo.org_id = %s AND u.is_service_account = TRUE;
                     """,
                     (org_id,),
                 )
@@ -386,7 +441,7 @@ async def add_user_to_organization(
                         """
                         SELECT id
                         FROM users
-                        WHERE username = %s;
+                        WHERE username = %s AND is_service_account = FALSE;
                         """,
                         (username,),
                     )
