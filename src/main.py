@@ -9,7 +9,6 @@ from src.endpoints.retreival import router as retreival_router
 from src.endpoints.system import router as system_router
 from src.endpoints.user import router as user_router, signup
 from src.models.user import UserRequest
-from src.configuration import config
 import psycopg
 from psycopg_pool import AsyncConnectionPool
 from pgvector.psycopg import register_vector_async
@@ -25,23 +24,25 @@ async def setup_pgvector_psycopg(conn: psycopg.AsyncConnection):
     await register_vector_async(conn)
 
 
-async def create_default_admin(pool: AsyncConnectionPool):
+async def create_default_admin(
+    pool: AsyncConnectionPool, username: str, password: str
+) -> None:
     try:
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
                     "SELECT id FROM users WHERE username = %s;",
-                    (config.ADMIN_USERNAME,),
+                    (username,),
                 )
                 if await cur.fetchone():
                     logger.info("Admin user already exists")
                     return
 
         await signup(
-            UserRequest(username=config.ADMIN_USERNAME, password=config.ADMIN_PASSWORD),
+            UserRequest(username=username, password=password),
             pool,
         )
-        logger.info(f"Default admin user '{config.ADMIN_USERNAME}' created")
+        logger.info(f"Default admin user '{username}' created")
     except Exception as e:
         logger.error(f"Error creating admin user: {str(e)}")
 
@@ -52,24 +53,23 @@ def lifecycle_provider(settings: Settings):
         try:
             app.settings = settings
             app.pool = AsyncConnectionPool(
-                config.DB_URL,
-                min_size=config.DB_POOL_MIN_SIZE,
-                max_size=config.DB_POOL_MAX_SIZE,
+                settings.DB_URL,
+                min_size=settings.DB_POOL_MIN_SIZE,
+                max_size=settings.DB_POOL_MAX_SIZE,
                 open=False,
-                max_idle=config.DB_POOL_IDLE_TIMEOUT,
-                max_lifetime=config.DB_POOL_LIFETIME_TIMEOUT,
+                max_idle=settings.DB_POOL_IDLE_TIMEOUT,
+                max_lifetime=settings.DB_POOL_LIFETIME_TIMEOUT,
                 configure=setup_pgvector_psycopg,
             )
-            pgai.install(config.DB_URL)
+            pgai.install(settings.DB_URL)
             await app.pool.open()
-
-            # Create default admin user
-            await create_default_admin(app.pool)
+            if settings.CREATE_DEFAULT_ADMIN_USER:
+                await create_default_admin(app.pool)
 
             # Initialize the clients
-            if config.USE_LLAMA_PARSE:
+            if settings.USE_LLAMA_PARSE:
                 app.parser_client = LlamaParseClient(
-                    auto_mode=config.LLAMA_PARSE_AUTO_MODE
+                    auto_mode=settings.LLAMA_PARSE_AUTO_MODE
                 )
             else:
                 app.parser_client = None

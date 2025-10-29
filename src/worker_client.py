@@ -341,7 +341,10 @@ class WorkerClient:
                 documents = await cur.fetchall()
                 column_names = [desc[0] for desc in cur.description]
                 documents_info = [
-                    DocumentInfo(**dict(zip(column_names, doc), organization_id=organization_id)) for doc in documents
+                    DocumentInfo(
+                        **dict(zip(column_names, doc), organization_id=organization_id)
+                    )
+                    for doc in documents
                 ]
 
                 total_pages = (total_count + limit - 1) // limit  # Ceiling division

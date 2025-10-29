@@ -122,6 +122,11 @@ DB_POOL_LIFETIME_TIMEOUT=1800
 JWT_EXPIRES_IN=3600
 JWT_SECRET_KEY=some_dummy_key
 
+# Admin User Configuration
+CREATE_DEFAULT_ADMIN_USER=True
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="password"
+
 # vLLM/OpenAI Configuration
 OPENAI_API_KEY=<your_openai_key>
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
