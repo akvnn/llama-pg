@@ -64,7 +64,11 @@ def lifecycle_provider(settings: Settings):
             pgai.install(settings.DB_URL)
             await app.pool.open()
             if settings.CREATE_DEFAULT_ADMIN_USER:
-                await create_default_admin(app.pool)
+                await create_default_admin(
+                    app.pool,
+                    username=settings.ADMIN_USERNAME,
+                    password=settings.ADMIN_PASSWORD,
+                )
 
             # Initialize the clients
             if settings.USE_LLAMA_PARSE:
