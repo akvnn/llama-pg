@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from arq.connections import RedisSettings
-import os
 
 
 class Settings(BaseSettings):
@@ -18,12 +17,13 @@ class Settings(BaseSettings):
     DB_POOL_LIFETIME_TIMEOUT: int = 1800
 
     # Security Configuration
-    JWT_EXPIRES_IN: int = int(os.getenv("JWT_EXPIRES_IN", "1296000"))  # in seconds
+    JWT_EXPIRES_IN: int = "1296000"  # in seconds
     JWT_SECRET_KEY: str = "some_dummy_key"
 
     # Admin User Configuration
-    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "password")
+    CREATE_DEFAULT_ADMIN_USER: bool = True
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "password"
 
     # OpenAI/vLLM Configuration
     OPENAI_API_KEY: str = "some_dummy_key"  # used for both OpenAI and vLLM
