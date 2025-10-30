@@ -1,5 +1,17 @@
 import * as React from "react";
-import { CircleGauge, Crown, UserPlus, Search, MessageSquare, FileText, Settings2, ChevronDown, Moon, Sun } from "lucide-react";
+import {
+  CircleGauge,
+  Crown,
+  UserPlus,
+  Search,
+  MessageSquare,
+  FileText,
+  Settings2,
+  ChevronDown,
+  Moon,
+  Sun,
+  UserMinus,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { NavMain } from "@/components/app/layout/nav-main";
@@ -24,6 +36,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { logout } from "@/lib/auth";
 
 const data = {
   navMain: [
@@ -96,7 +109,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           className="cursor-pointer"
                         >
                           {theme === "light" ? <Moon /> : <Sun />}
-                          <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+                          <span>
+                            {theme === "light" ? "Dark Mode" : "Light Mode"}
+                          </span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
@@ -108,6 +123,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <UserPlus />
                             <span>Create User</span>
                           </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton
+                          onClick={() => {
+                            logout();
+                            window.location.reload();
+                          }}
+                        >
+                          <UserMinus />
+                          <span>Logout</span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>

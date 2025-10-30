@@ -1,6 +1,8 @@
 import axiosInstance from "../axios";
 
-const JWT_EXPIRES_IN = parseInt(import.meta.env.VITE_JWT_EXPIRES_IN || "1296000");
+const JWT_EXPIRES_IN = parseInt(
+  import.meta.env.VITE_JWT_EXPIRES_IN || "1296000"
+);
 
 export const setToken = (token: string): void => {
   localStorage.setItem("auth_token", token);
