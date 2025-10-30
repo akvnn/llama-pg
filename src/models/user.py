@@ -7,6 +7,7 @@ from uuid import UUID
 class UserRequest(BaseModel):
     username: str
     password: str
+    is_service_account: bool = False
 
     @field_validator("password")
     @classmethod
