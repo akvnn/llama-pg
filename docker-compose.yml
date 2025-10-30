@@ -33,12 +33,13 @@ services:
       - pg_data:/home/postgres/pgdata/data
       - ./init_psql.sql:/docker-entrypoint-initdb.d/init_psql.sql
     restart: always
+    command: postgres -c  'timescaledb.telemetry_level=off'
     networks:
       - llama-pg-net
   vectorizer-worker:
     image: timescale/pgai-vectorizer-worker:latest
     environment:
-      PGAI_VECTORIZER_WORKER_DB_URL: ${DB_URL}
+      PGAI_VECTORIZER_WORKER_DB_URL: ${DB_URL:-postgresql://postgres:password@postgres:5432/postgres}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       - postgres
