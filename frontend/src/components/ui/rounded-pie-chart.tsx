@@ -20,12 +20,16 @@ interface RoundedPieChartProps {
 }
 
 const chartConfig = {
+  Pending: {
+    label: "Pending",
+    color: "#FFFFFF",
+  },
   documents: {
     label: "Documents",
   },
   embedded: {
     label: "Ready",
-    color: "var(--chart-1)",
+    color: "#FFFFFF",
   },
   parsing: {
     label: "Processing",
@@ -56,13 +60,21 @@ export function RoundedPieChart({
     : [];
 
   function getStatusColor(status: string): string {
-    const colors: Record<string, string> = {
-      queued: "hsl(var(--chart-3))",
-      parsing: "hsl(var(--chart-2))",
-      embedded: "hsl(var(--chart-1))",
-      failed: "hsl(var(--chart-4))",
-    };
-    return colors[status] || "hsl(var(--chart-5))";
+    const isDark = document.documentElement.classList.contains("dark");
+    const colors: Record<string, string> = isDark
+      ? {
+          queued: "#c9a030",
+          parsing: "#5fcba4",
+          embedded: "#8b5cf6",
+          failed: "#d946ef",
+        }
+      : {
+          queued: "#4b5563",
+          parsing: "#06b6d4",
+          embedded: "#f59e0b",
+          failed: "#eab308",
+        };
+    return colors[status] || (isDark ? "#f87171" : "#ec4899");
   }
 
   if (!statusCounts || chartData.length === 0) {

@@ -4,7 +4,6 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -35,7 +34,19 @@ interface DocumentDetail {
   uploaded_by_user_id: string;
 }
 
-function base64ToBlob(base64: string, contentType: string = ""): string {
+function getContentType(fileExtension: string): string {
+  const mimeTypes: Record<string, string> = {
+    pdf: "application/pdf",
+    txt: "text/plain",
+    md: "text/markdown",
+    html: "text/html",
+    json: "application/json",
+    xml: "application/xml",
+  };
+  return mimeTypes[fileExtension.toLowerCase()] || "application/octet-stream";
+}
+
+function base64ToBlob(base64: string, fileExtension: string = ""): string {
   const byteCharacters = atob(base64);
 
   const byteNumbers = new Uint8Array(byteCharacters.length);
@@ -43,6 +54,7 @@ function base64ToBlob(base64: string, contentType: string = ""): string {
     byteNumbers[i] = byteCharacters.charCodeAt(i);
   }
 
+  const contentType = getContentType(fileExtension);
   const blob = new Blob([byteNumbers], { type: contentType });
   return URL.createObjectURL(blob);
 }
@@ -131,10 +143,10 @@ export function DocumentsTableCellViewer({
           <ResizableHandle withHandle className="hidden md:flex" />
           <ResizablePanel className="bg-white min-w-full md:min-w-[70%] lg:min-w-[40%] !overflow-y-auto">
             <DrawerHeader className="gap-1">
-              <DrawerTitle className="text-2xl">
+              <DrawerTitle className="text-2xl text-black">
                 {item.document_uploaded_name.split(".")[0]}
               </DrawerTitle>
-              <DrawerDescription>
+              <DrawerDescription className="text-muted-foreground">
                 Project: {item.project_name} | Status: {item.status}
               </DrawerDescription>
             </DrawerHeader>
@@ -167,12 +179,6 @@ export function DocumentsTableCellViewer({
                 />
               )}
             </div>
-            <DrawerFooter className="flex flex-row gap-3 flex-wrap">
-              <Button className="grow">Submit</Button>
-              <DrawerClose asChild className="grow">
-                <Button variant="outline">Done</Button>
-              </DrawerClose>
-            </DrawerFooter>
           </ResizablePanel>
         </ResizablePanelGroup>
       </DrawerContent>
