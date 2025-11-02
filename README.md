@@ -130,6 +130,7 @@ ADMIN_PASSWORD="password"
 # vLLM/OpenAI Configuration
 OPENAI_API_KEY=<your_openai_key>
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSIONS=1536
 OPENAI_MODEL=gpt-5
 USE_VLLM=False
 OPENAI_HOST=https://api.openai.com/v1
