@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     OPENAI_EMBEDDING_MODEL: str = (
         "text-embedding-3-small"  # used for both OpenAI and vLLM
     )
+    OPENAI_EMBEDDING_DIMENSIONS: int = 1536  # used for both OpenAI and vLLM
     OPENAI_MODEL: str = "gpt-5"  # used for both OpenAI and vLLM
     OPENAI_HOST: str = "https://api.openai.com/v1"  # used for both OpenAI and vLLM
     USE_VLLM: bool = False

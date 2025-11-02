@@ -20,13 +20,18 @@ services:
     volumes:
       - redis_data:/data
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     networks:
       - llama-pg-net
   postgres:
     image: timescale/timescaledb-ha:pg17
     container_name: timescaledb
     ports:
-      - 5437:5432
+      - 5432:5432
     environment:
       - POSTGRES_PASSWORD=password
     volumes:
@@ -34,28 +39,29 @@ services:
       - ./init_psql.sql:/docker-entrypoint-initdb.d/init_psql.sql
     restart: always
     command: postgres -c  'timescaledb.telemetry_level=off'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - llama-pg-net
-  vectorizer-worker:
-    image: timescale/pgai-vectorizer-worker:latest
-    environment:
-      PGAI_VECTORIZER_WORKER_DB_URL: ${DB_URL:-postgresql://postgres:password@postgres:5432/postgres}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-    depends_on:
-      - postgres
-    networks:
-      - llama-pg-net
-  parser-worker:
+  worker:
     build:
       context: .
       dockerfile: Dockerfile
-    command: arq src.worker.WorkerSettings
-    container_name: parser-worker
+    command: .venv/bin/python -m src.worker
+    container_name: worker
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src/:/opt/src # for development. remove this bind mount for production
     networks:
       - llama-pg-net
   llama-pg-api:
@@ -67,7 +73,8 @@ services:
     ports:
       - ${API_PORT:-8000}:${API_PORT:-8000}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     volumes:

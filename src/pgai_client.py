@@ -1,3 +1,4 @@
+import json
 import sys
 import asyncio
 import uuid
@@ -8,7 +9,6 @@ if sys.platform == "win32":
 
 import os
 from typing import List
-from loguru import logger
 from openai import AsyncOpenAI
 from psycopg.rows import class_row
 import re
@@ -26,25 +26,6 @@ os.environ["OPENAI_BASE_URL"] = config.OPENAI_BASE_URL
 class PGAIClient:
     def __init__(self, config: Settings = Settings()):
         self.config = config
-
-    # async def define_schema(self, organization_id: str):
-    #     """
-    #     Create the pgai table for the organization
-    #     """
-    #     pass
-    # # MOVED TO UTILS
-
-    # async def create_vectorizer(self, schema_name, table_name="wiki"):
-    #     """
-    #     Create a vectorizer that defines how embeddings are generated from the wiki table.
-    #     The vectorizer specifies:
-    #     - The source table ('wiki')
-    #     - The column to use for generating embeddings ('text')
-    #     - The embedding model to use
-    #     - The destination view for querying embeddings ('wiki_embedding')
-    #     """
-    #     pass
-    # # MOVED TO UTILS
 
     async def load_documents_to_db(self, organization_id, project_id, documents):
         """
@@ -93,14 +74,12 @@ class PGAIClient:
         # Normalize whitespace
         sanitized_query = " ".join(text.split())
 
-        logger.debug(sanitized_query)
-
         client = AsyncOpenAI(
             api_key=self.config.OPENAI_API_KEY, base_url=self.config.OPENAI_BASE_URL
         )
         response = await client.embeddings.create(
             model=self.config.OPENAI_EMBEDDING_MODEL,
-            input=query,
+            input=sanitized_query,
             encoding_format="float",
         )
 
@@ -110,10 +89,10 @@ class PGAIClient:
         # Query the database for the most similar chunks using pgvector's cosine distance operator (<=>)
         async with db.connection() as conn:
             async with conn.cursor(row_factory=class_row(DocumentSearchResult)) as cur:
-                # TODO: check if thi is _embedding or without it
+                # TODO: add metadata
                 await cur.execute(
                     f"""
-                        SELECT w.id, w.title, w.metadata, w.text, w.chunk, w.embedding <=> %s as distance
+                        SELECT w.id, w.project_id, w.title, w.metadata, w.text, w.chunk, w.embedding <=> %s as distance
                             FROM "{organization_id}".{TableNames.reserved_pgai_table_name}_embedding w
                             WHERE w.project_id = %s
                             ORDER BY distance
@@ -121,8 +100,8 @@ class PGAIClient:
                     """,
                     (embedding, project_id, limit),
                 )
-
-                return await cur.fetchall()
+                results = await cur.fetchall()
+                return results
 
     async def rag_query(self, query, limit, organization_id: str, project_id: str):
         """
@@ -134,7 +113,8 @@ class PGAIClient:
         )
 
         context = "\n\n".join(
-            f"Document {chunk.url}:\n{chunk.text}" for chunk in relevant_chunks
+            f"Document {json.dumps(chunk.metadata)}:\n{chunk.text}"
+            for chunk in relevant_chunks
         )
         prompt = f"""Question: {query}
 

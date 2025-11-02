@@ -1,5 +1,6 @@
 from src.configuration import config
 from src.constant import TableNames
+# from src.models.document import DocumentStatus
 
 
 async def create_org_schema(cur, org_id: str):
@@ -39,7 +40,6 @@ async def create_org_schema(cur, org_id: str):
     """)
 
     # Create PGAI (wiki) table
-
     await cur.execute(f"""
                     CREATE TABLE IF NOT EXISTS "{org_id}".{TableNames.reserved_pgai_table_name} (
                         id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -50,15 +50,39 @@ async def create_org_schema(cur, org_id: str):
                     )
                 """)
     # Create PGAI Vectorizer (embedding table)
+    org_id_safe = f"org_{org_id.replace('-', '_')}"  # Convert UUID hyphens to underscores. Prefix with org_ for pgai vectorizer_name_check constraint
     await cur.execute(f""" 
                     SELECT ai.create_vectorizer(
                         '"{org_id}".{TableNames.reserved_pgai_table_name}'::regclass,
                         if_not_exists => true,
                         loading => ai.loading_column(column_name=>'text'),
                         embedding => ai.embedding_openai(model=>'{config.OPENAI_EMBEDDING_MODEL}',
-                                                        dimensions=>1024,
+                                                        dimensions=>{config.OPENAI_EMBEDDING_DIMENSIONS},
                                                         base_url=>'{config.OPENAI_BASE_URL}'),
                         destination => ai.destination_table(view_name=>'{TableNames.reserved_pgai_table_name}_embedding'),
-                        name => '{TableNames.reserved_pgai_table_name}_vectorizer'
+                        name => '{org_id_safe}_vectorizer'
                     )
                 """)
+    # TODO: create trigger
+    # # Create trigger to update document status after vectorization
+
+    # await cur.execute(f"""
+    #     CREATE OR REPLACE FUNCTION update_embedding_status_{org_id_safe}()
+    #     RETURNS TRIGGER AS $$
+    #     BEGIN
+    #         UPDATE "{org_id}".document
+    #         SET status = '{DocumentStatus.READY.value}',
+    #             embedded_at = NOW()
+    #         WHERE id = NEW.id;
+
+    #         RETURN NEW;
+    #     END;
+    #     $$ LANGUAGE plpgsql;
+
+    #     DROP TRIGGER IF EXISTS after_vectorization ON "{org_id}".{TableNames.reserved_pgai_table_name}_embedding;
+
+    #     CREATE TRIGGER after_vectorization
+    #     AFTER INSERT ON "{org_id}".{TableNames.reserved_pgai_table_name}_embedding
+    #     FOR EACH ROW
+    #     EXECUTE FUNCTION update_embedding_status_{org_id_safe}();
+    # """)

@@ -200,7 +200,10 @@ class WorkerClient:
                     and "." in document.get("document_uploaded_name")
                     else "pdf"
                 )
-                file_path = f"temp.{file_type}"
+                # TODO: add check for document_uploaded_name to ensure it has a valid file extension
+                file_path = (
+                    document.get("document_uploaded_name") or f"temp.{file_type}"
+                )
                 with open(file_path, "wb") as f:
                     f.write(document.get("document_bytes"))
                 metadata = dict(document.get("metadata", {}))
@@ -237,17 +240,16 @@ class WorkerClient:
                                     "Empty list passed as parsed_document. Skipping document."
                                 )
                                 continue
-                            # Get doc_id from the parsed_document's metadata (if it's a Document object)
                             if isinstance(parsed_document, list):
                                 parsed_document = parsed_document[0]
-                            if hasattr(parsed_document, "metadata"):
-                                doc_id = parsed_document.metadata.get("id", "")
-                            else:
-                                doc_id = parsed_document.get("metadata", {}).get(
-                                    "id", ""
-                                )
+                            metadata = (
+                                getattr(parsed_document, "metadata", {})
+                                if hasattr(parsed_document, "metadata")
+                                else parsed_document.get("metadata", {})
+                            )
+                            doc_id = metadata.get("id", None)
                             if not doc_id or doc_id == "":
-                                logger.warning(
+                                logger.error(
                                     "Document ID not found in parsed_document metadata. Skipping document."
                                 )
                                 continue
@@ -255,7 +257,8 @@ class WorkerClient:
                                 f"""
                                 UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
                                 SET status = %s, parsed_document = %s
-                                WHERE id = %s;
+                                WHERE id = %s
+                                RETURNING project_id;
                             """,
                                 (
                                     DocumentStatus.QUEUED_EMBEDDING.value,
@@ -263,29 +266,32 @@ class WorkerClient:
                                     doc_id,
                                 ),
                             )
-                            pgai_table_name = TableNames.reserved_pgai_table_name
+                            project_id = await cur.fetchone()
+                            if not project_id:
+                                logger.error(
+                                    f"Failed to update document with ID {doc_id} in organization {organization_id}"
+                                )
+                                continue
                             await cur.execute(
                                 f"""
-                                INSERT INTO "{organization_id}".{pgai_table_name} 
-                                (text, title)
-                                VALUES (%s, %s);
+                                INSERT INTO "{organization_id}".{TableNames.reserved_pgai_table_name} 
+                                (text, title, metadata, project_id)
+                                VALUES (%s, %s, %s, %s);
                                 """,
                                 (
-                                    getattr(parsed_document, "text", None)
+                                    getattr(parsed_document, "text", "")
                                     if hasattr(parsed_document, "text")
-                                    else parsed_document.get("text", None),
-                                    getattr(parsed_document, "metadata", {}).get(
-                                        "title", None
-                                    )
-                                    if hasattr(parsed_document, "metadata")
-                                    else parsed_document.get("metadata", {}).get(
-                                        "title", None
-                                    ),
+                                    else parsed_document.get("text", ""),
+                                    metadata.get("title", ""),
+                                    json.dumps(metadata),
+                                    project_id[0]
+                                    if project_id and len(project_id) > 0
+                                    else None,
                                 ),
                             )
                         except Exception as e:
                             logger.error(f"Error uploading parsed document: {e}")
-                            return
+                            raise
         logger.info(
             f"Uploaded {len(parsed_documents)} parsed documents to the database"
         )

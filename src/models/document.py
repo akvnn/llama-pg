@@ -21,7 +21,7 @@ class DocumentSearchResult:
     distance: float
 
     def __str__(self):
-        return f"""WikiSearchResult:
+        return f"""SearchResult:
                 ID: {self.id}
                 Title: {self.title}
                 Metadata: {self.metadata}
