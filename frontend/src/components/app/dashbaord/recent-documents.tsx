@@ -1,24 +1,15 @@
-import { DocumentsTable, schema } from "../documents-table/documents-table";
+import { DocumentsTable } from "../documents-table/documents-table";
 import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "@/axios";
 import { useOrganizationStore } from "@/hooks/use-organization";
-import { z } from "zod";
-
-interface PaginationResponse {
-  items: z.infer<typeof schema>[];
-  total_count: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
-  has_next: boolean;
-  has_previous: boolean;
-}
+import type { Document } from "@/types/document.types";
+import type { PaginationResponse } from "@/types/api.types";
 
 export default function RecentDocuments() {
   const currentOrganization = useOrganizationStore(
     (state) => state.currentOrganization
   );
-  const [data, setData] = useState<z.infer<typeof schema>[]>([]);
+  const [data, setData] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDocuments = useCallback(async () => {
@@ -29,7 +20,7 @@ export default function RecentDocuments() {
 
     try {
       setLoading(true);
-      const response = await axiosInstance.get<PaginationResponse>(
+      const response = await axiosInstance.get<PaginationResponse<Document>>(
         "/recent_documents_info",
         {
           params: {

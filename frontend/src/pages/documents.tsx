@@ -1,55 +1,64 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Upload } from "lucide-react";
 import axiosInstance from "@/axios";
-import {
-  DocumentsTable,
-  schema,
-} from "@/components/app/documents-table/documents-table";
+import { DocumentsTable } from "@/components/app/documents-table/documents-table";
 import { useOrganizationStore } from "@/hooks/use-organization";
 import { useProjectStore } from "@/hooks/use-project";
-import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface Project {
-  project_id: string;
-  project_name: string;
-  description: string | null;
-  number_of_documents: number;
-}
-
-interface PaginationResponse {
-  items: z.infer<typeof schema>[];
-  total_count: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
-  has_next: boolean;
-  has_previous: boolean;
-}
+import UploadDocuments from "@/components/app/documents/upload documents";
+import type { Project } from "@/types/project.types";
+import type { PaginationResponse } from "@/types/api.types";
+import type { Document } from "@/types/document.types";
 
 export default function Documents() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [documents, setDocuments] = useState<z.infer<typeof schema>[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
 
   const currentOrganization = useOrganizationStore(
     (state) => state.currentOrganization
   );
   const currentProject = useProjectStore((state) => state.currentProject);
+
+  const handleUploadFiles = async () => {
+    if (!currentOrganization || !currentProject || selectedFiles.length === 0)
+      return;
+
+    setUploadingFiles(selectedFiles.map((f) => f.name));
+
+    for (const file of selectedFiles) {
+      try {
+        const formData = new FormData();
+        formData.append("document", file);
+        formData.append("organization_id", currentOrganization);
+        formData.append("project_id", currentProject);
+        formData.append("document_name", file.name);
+        const metadata = {
+          title: file.name,
+          url: file.name,
+        };
+        formData.append("metadata", JSON.stringify(metadata));
+
+        await axiosInstance.post("/upload_document", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
+      } catch (error) {
+        console.error(`Upload failed for ${file.name}:`, error);
+        alert(`Failed to upload ${file.name}`);
+        setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
+      }
+    }
+
+    setSelectedFiles([]);
+    setUploadDialogOpen(false);
+    fetchDocuments();
+  };
 
   const fetchProject = useCallback(async () => {
     if (!currentOrganization || !currentProject) return;
@@ -79,7 +88,7 @@ export default function Documents() {
 
     try {
       setLoading(true);
-      const response = await axiosInstance.get<PaginationResponse>(
+      const response = await axiosInstance.get<PaginationResponse<Document>>(
         "/recent_documents_info",
         {
           params: {
@@ -103,47 +112,13 @@ export default function Documents() {
 
   useEffect(() => {
     fetchProject();
-  }, [fetchProject]);
+  }, [currentOrganization, currentProject]);
 
   useEffect(() => {
     if (project) {
       fetchDocuments();
     }
-  }, [fetchDocuments, project]);
-
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadFile || !currentOrganization || !currentProject) return;
-
-    try {
-      setUploading(true);
-      const formData = new FormData();
-      formData.append("document", uploadFile);
-      formData.append("organization_id", currentOrganization);
-      formData.append("project_id", currentProject);
-      formData.append("document_name", uploadFile.name);
-      const metadata = {
-        title: uploadFile.name,
-        url: uploadFile.name,
-      };
-      formData.append("metadata", JSON.stringify(metadata));
-
-      await axiosInstance.post("/upload_document", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      setUploadDialogOpen(false);
-      setUploadFile(null);
-      fetchDocuments();
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("Failed to upload document");
-    } finally {
-      setUploading(false);
-    }
-  };
+  }, [project, currentOrganization, currentProject]);
 
   if (!currentProject) {
     return (
@@ -183,45 +158,15 @@ export default function Documents() {
               </p>
             )}
           </div>
-          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Upload Document</DialogTitle>
-                <DialogDescription>
-                  Upload a new document to {project?.project_name}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUpload} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="document">Document</Label>
-                  <Input
-                    id="document"
-                    type="file"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                    required
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setUploadDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={uploading}>
-                    {uploading ? "Uploading..." : "Upload"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <UploadDocuments
+            uploadDialogOpen={uploadDialogOpen}
+            setUploadDialogOpen={setUploadDialogOpen}
+            project={project}
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            handleUploadFiles={handleUploadFiles}
+            uploadingFiles={uploadingFiles}
+          />
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{project?.number_of_documents || 0} documents</span>

@@ -28,26 +28,8 @@ import axiosInstance from "@/axios";
 import type { Organization } from "@/types/org.types";
 import { useOrganizationStore } from "@/hooks/use-organization";
 import { useProjectStore } from "@/hooks/use-project";
-import { z } from "zod";
-
-const projectSchema = z.object({
-  project_id: z.string(),
-  project_name: z.string(),
-  number_of_documents: z.number(),
-  created_at: z.string().nullable(),
-  updated_at: z.string().nullable(),
-  description: z.string().nullable(),
-});
-
-interface PaginationResponse {
-  items: z.infer<typeof projectSchema>[];
-  total_count: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
-  has_next: boolean;
-  has_previous: boolean;
-}
+import type { Project } from "@/types/project.types";
+import type { PaginationResponse } from "@/types/api.types";
 
 export function ContextSwitcher() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -61,10 +43,8 @@ export function ContextSwitcher() {
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [projects, setProjects] = useState<z.infer<typeof projectSchema>[]>([]);
-  const [selectedProject, setSelectedProject] = useState<z.infer<
-    typeof projectSchema
-  > | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectsLoading, setProjectsLoading] = useState(false);
 
   const setCurrentOrganization = useOrganizationStore(
@@ -112,7 +92,7 @@ export function ContextSwitcher() {
 
       try {
         setProjectsLoading(true);
-        const response = await axiosInstance.get<PaginationResponse>(
+        const response = await axiosInstance.get<PaginationResponse<Project>>(
           "/projects_info",
           {
             params: {
@@ -199,7 +179,7 @@ export function ContextSwitcher() {
       setProjectName("");
       setProjectDescription("");
 
-      const response = await axiosInstance.get<PaginationResponse>(
+      const response = await axiosInstance.get<PaginationResponse<Project>>(
         "/projects_info",
         {
           params: {

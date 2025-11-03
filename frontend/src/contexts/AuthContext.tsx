@@ -2,15 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getToken, getUser, login, logout, signup } from "../lib/auth";
 import { useOrganizationStore } from "@/hooks/use-organization";
-
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: { username: string; userOrgIds: string[] } | null;
-  loading: boolean;
-  handleLogin: (username: string, password: string) => Promise<void>;
-  handleSignup: (username: string, password: string) => Promise<void>;
-  handleLogout: () => void;
-}
+import type { AuthContextType, AuthUser } from "@/types/auth.types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -18,10 +10,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{
-    username: string;
-    userOrgIds: string[];
-  } | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const setCurrentOrganization = useOrganizationStore(
     (state) => state.setCurrentOrganization
@@ -46,11 +35,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (loading) return;
 
-    const isLoginPage = location.pathname === "/login";
+    const isPublicRoute =
+      location.pathname === "/login" ||
+      location.pathname === "/" ||
+      location.pathname === "/signup";
 
-    if (!isAuthenticated && !isLoginPage) {
+    if (!isAuthenticated && !isPublicRoute) {
       navigate("/login");
-    } else if (isAuthenticated && isLoginPage) {
+    } else if (isAuthenticated && location.pathname === "/login") {
       navigate("/dashboard");
     }
   }, [isAuthenticated, loading, location.pathname, navigate]);

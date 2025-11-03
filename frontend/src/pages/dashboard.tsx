@@ -119,52 +119,52 @@ export default function Dashboard() {
           </CardHeader>
         </Card>
 
-        <Card className="relative overflow-hidden border-green-200 dark:border-green-900">
+        <Card className="relative overflow-hidden border-chart-3/30">
           <CardHeader>
             <CardDescription>Ready for Search</CardDescription>
-            <CardTitle className="text-3xl font-bold tabular-nums text-green-600 dark:text-green-400">
+            <CardTitle className="text-3xl font-bold tabular-nums text-chart-3">
               {readyCount}
             </CardTitle>
             <div className="absolute right-4 top-4">
               <Badge
                 variant="outline"
-                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-green-200 dark:border-green-900"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-3/30"
               >
-                <FileClock className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <FileClock className="h-5 w-5 text-chart-3" />
               </Badge>
             </div>
           </CardHeader>
         </Card>
 
-        <Card className="relative overflow-hidden border-blue-200 dark:border-blue-900">
+        <Card className="relative overflow-hidden border-chart-1/30">
           <CardHeader>
             <CardDescription>Queued</CardDescription>
-            <CardTitle className="text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
+            <CardTitle className="text-3xl font-bold tabular-nums text-chart-1">
               {queuedCount}
             </CardTitle>
             <div className="absolute right-4 top-4">
               <Badge
                 variant="outline"
-                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-blue-200 dark:border-blue-900"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-1/30"
               >
-                <Logs className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <Logs className="h-5 w-5 text-chart-1" />
               </Badge>
             </div>
           </CardHeader>
         </Card>
 
-        <Card className="relative overflow-hidden border-amber-200 dark:border-amber-900">
+        <Card className="relative overflow-hidden border-chart-5/30">
           <CardHeader>
             <CardDescription>Processing</CardDescription>
-            <CardTitle className="text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+            <CardTitle className="text-3xl font-bold tabular-nums text-chart-5">
               {processingCount}
             </CardTitle>
             <div className="absolute right-4 top-4">
               <Badge
                 variant="outline"
-                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-amber-200 dark:border-amber-900"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-5/30"
               >
-                <ClockArrowDown className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <ClockArrowDown className="h-5 w-5 text-chart-5" />
               </Badge>
             </div>
           </CardHeader>

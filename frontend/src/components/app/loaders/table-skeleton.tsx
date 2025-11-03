@@ -12,7 +12,7 @@ export default function TableSkeleton() {
   return (
     <div className="mx-4 sm:mx-6 border rounded-xl overflow-hidden">
       <Table>
-        <TableHeader className="bg-gradient-to-tr from-gray-50 to-gray-40">
+        <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="w-[150px]">
               <Skeleton className="h-5 w-[150px]" />

@@ -3,6 +3,7 @@ import {
   CircleGauge,
   Crown,
   UserPlus,
+  Building2,
   Search,
   MessageSquare,
   FileText,
@@ -10,7 +11,7 @@ import {
   ChevronDown,
   Moon,
   Sun,
-  UserMinus,
+  Power,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -117,11 +118,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={location.pathname === "/signup"}
+                          isActive={location.pathname === "/user"}
                         >
-                          <Link to="/signup">
+                          <Link to="/user">
                             <UserPlus />
                             <span>Create User</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={location.pathname === "/user-org"}
+                        >
+                          <Link to="/user-org">
+                            <Building2 />
+                            <span>Organizations</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -132,7 +144,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             window.location.reload();
                           }}
                         >
-                          <UserMinus />
+                          <Power />
                           <span>Logout</span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>

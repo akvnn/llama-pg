@@ -8,16 +8,7 @@ import { useOrganizationStore } from "@/hooks/use-organization";
 import { useProjectStore } from "@/hooks/use-project";
 import axiosInstance from "@/axios";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface SearchResult {
-  id: string;
-  title: string;
-  metadata: Record<string, any>;
-  text: string;
-  project_id: string;
-  chunk: number;
-  distance: number;
-}
+import type { SearchResult } from "@/types/search.types";
 
 export default function Search() {
   const [query, setQuery] = useState("");

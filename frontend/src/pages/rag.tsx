@@ -18,11 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+import type { Message } from "@/types/message.types";
 
 export default function RAG() {
   const [messages, setMessages] = useState<Message[]>([]);

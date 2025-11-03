@@ -13,26 +13,11 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import type { z } from "zod";
-import type { schema } from "./documents-table";
 import { Button } from "../../ui/button";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/axios";
 import { Loader2 } from "lucide-react";
-
-interface DocumentDetail {
-  document_name: string;
-  document_type: string;
-  metadata: Record<string, unknown>;
-  document_status: string;
-  document_id: string;
-  created_at: string;
-  updated_at: string | null;
-  parsed_markdown_text: string | null;
-  file_bytes: string;
-  summary: string | null;
-  uploaded_by_user_id: string;
-}
+import type { Document, DocumentDetail } from "@/types/document.types";
 
 function getContentType(fileExtension: string): string {
   const mimeTypes: Record<string, string> = {
@@ -62,7 +47,7 @@ function base64ToBlob(base64: string, fileExtension: string = ""): string {
 export function DocumentsTableCellViewer({
   item,
 }: {
-  item: z.infer<typeof schema>;
+  item: Document;
 }) {
   const isMobile = useIsMobile();
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
@@ -141,9 +126,9 @@ export function DocumentsTableCellViewer({
             </DrawerClose>
           </ResizablePanel>
           <ResizableHandle withHandle className="hidden md:flex" />
-          <ResizablePanel className="bg-white min-w-full md:min-w-[70%] lg:min-w-[40%] !overflow-y-auto">
+          <ResizablePanel className="bg-popover min-w-full md:min-w-[70%] lg:min-w-[40%] !overflow-y-auto">
             <DrawerHeader className="gap-1">
-              <DrawerTitle className="text-2xl text-black">
+              <DrawerTitle className="text-2xl text-popover-foreground">
                 {item.document_uploaded_name.split(".")[0]}
               </DrawerTitle>
               <DrawerDescription className="text-muted-foreground">
@@ -162,7 +147,7 @@ export function DocumentsTableCellViewer({
               {error && (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <p className="text-red-500 font-semibold">
+                    <p className="text-destructive font-semibold">
                       Error loading document
                     </p>
                     <p className="text-sm text-muted-foreground mt-2">

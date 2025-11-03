@@ -49,7 +49,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { z } from "zod";
 import {
   Table,
   TableBody,
@@ -58,6 +57,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { z } from "zod";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,15 +74,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { projectSchema } from "@/types/project.types";
 
-export const schema = z.object({
-  project_id: z.string(),
-  project_name: z.string(),
-  number_of_documents: z.number(),
-  created_at: z.string().nullable(),
-  updated_at: z.string().nullable(),
-  description: z.string().nullable(),
-});
+export const schema = projectSchema;
 
 function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({

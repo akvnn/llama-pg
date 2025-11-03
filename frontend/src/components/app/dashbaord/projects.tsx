@@ -2,24 +2,14 @@ import ProjectsTable from "../projects-table/projects-table";
 import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "@/axios";
 import { useOrganizationStore } from "@/hooks/use-organization";
-import { schema as apiSchema } from "../projects-table/projects-table";
-import { z } from "zod";
-
-interface PaginationResponse {
-  items: z.infer<typeof apiSchema>[];
-  total_count: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
-  has_next: boolean;
-  has_previous: boolean;
-}
+import type { Project } from "@/types/project.types";
+import type { PaginationResponse } from "@/types/api.types";
 
 export default function Projects() {
   const currentOrganization = useOrganizationStore(
     (state) => state.currentOrganization
   );
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProjects = useCallback(async () => {
@@ -27,7 +17,7 @@ export default function Projects() {
 
     try {
       setLoading(true);
-      const response = await axiosInstance.get<PaginationResponse>(
+      const response = await axiosInstance.get<PaginationResponse<Project>>(
         "/projects_info",
         {
           params: {

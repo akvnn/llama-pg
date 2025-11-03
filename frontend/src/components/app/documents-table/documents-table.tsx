@@ -52,7 +52,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { z } from "zod";
 import {
   Table,
   TableBody,
@@ -78,19 +77,15 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { DocumentsTableCellViewer } from "./documents-table-cell-viewer";
+import axiosInstance from "@/axios";
+import { base64ToBlob } from "@/lib/blob";
+import {
+  documentSchema,
+  type Document,
+  type DocumentDetail,
+} from "@/types/document.types";
 
-export const schema = z.object({
-  document_id: z.string(),
-  document_uploaded_name: z.string(),
-  metadata: z.record(z.unknown()),
-  status: z.string(),
-  uploaded_by_user_id: z.string(),
-  created_at: z.string(),
-  project_id: z.string(),
-  project_name: z.string(),
-  organization_id: z.string(),
-});
-
+export const schema = documentSchema;
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({
@@ -113,24 +108,50 @@ function DragHandle({ id }: { id: string }) {
 
 const getStatusIcon = (status: string) => {
   if (status === "Ready for Search") {
-    return (
-      <CircleCheck
-        className="fill-green-500 dark:fill-green-400"
-        color="green"
-      />
-    );
+    return <CircleCheck className="fill-chart-3 text-chart-3" />;
   } else if (status === "Pending") {
-    return <CloudUpload color="orange" />;
+    return <CloudUpload className="text-chart-5" />;
   } else if (
     status === "Queued for Parsing" ||
     status === "Queued for Embedding"
   ) {
-    return <FileCheck2 color="blue" />;
+    return <FileCheck2 className="text-chart-1" />;
   }
-  return <FileCog color="gray" />;
+  return <FileCog className="text-muted-foreground" />;
 };
 
-const columns: ColumnDef<z.infer<typeof schema>>[] = [
+const handleCopy = (item: Document) => {
+  navigator.clipboard.writeText(item.document_uploaded_name);
+};
+
+const handleDownload = async (item: Document) => {
+  try {
+    const response = await axiosInstance.get<DocumentDetail>("/document", {
+      params: {
+        document_id: item.document_id,
+        project_id: item.project_id,
+        organization_id: item.organization_id,
+      },
+    });
+
+    const { file_bytes, document_type } = response.data;
+
+    const blobUrl = base64ToBlob(file_bytes, document_type);
+    const link = document.createElement("a");
+    link.download = item.document_uploaded_name;
+    link.href = blobUrl;
+    link.click();
+  } catch (error: any) {
+    console.error("Error downloading document:", error);
+    alert("Failed to download document");
+  }
+};
+
+const handleDelete = (item: Document) => {
+  alert(`Deleting document: ${item.document_uploaded_name}`);
+};
+
+const columns: ColumnDef<Document>[] = [
   {
     id: "drag",
     header: () => null,
@@ -198,7 +219,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     id: "actions",
-    cell: () => (
+    cell: ({ row }) => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -211,18 +232,26 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Copy</DropdownMenuItem>
-          <DropdownMenuItem>Download</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleCopy(row.original)}>
+            Copy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleDownload(row.original)}>
+            Download
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => handleDelete(row.original)}
+          >
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     ),
   },
 ];
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+function DraggableRow({ row }: { row: Row<Document> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.document_uploaded_name,
   });
@@ -248,12 +277,11 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
 }
 
 export const DocumentsTable: React.FC<{
-  data: z.infer<typeof schema>[];
+  data: Document[];
   loading: boolean;
   limit?: number;
 }> = ({ data: externalData, loading, limit }) => {
-  const [data, setData] =
-    React.useState<z.infer<typeof schema>[]>(externalData);
+  const [data, setData] = React.useState<Document[]>(externalData);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
