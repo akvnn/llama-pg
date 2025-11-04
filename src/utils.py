@@ -82,8 +82,7 @@ async def create_org_schema(cur, org_id: str):
                 -- Update document status if document_id was found
                 IF doc_id IS NOT NULL THEN
                     UPDATE "{org_id}".{TableNames.reserved_document_table_name}
-                    SET status = '{DocumentStatus.READY.value}',
-                        embedded_at = NOW()
+                    SET status = '{DocumentStatus.READY.value}'
                     WHERE id = doc_id;
                 END IF;
                 
