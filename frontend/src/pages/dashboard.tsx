@@ -14,6 +14,7 @@ import TableSkeleton from "@/components/app/loaders/table-skeleton";
 import { useOrganizationStore } from "@/hooks/use-organization";
 import axiosInstance from "@/axios";
 import type { StatInfo } from "@/types/dashboard.types";
+import type { Project } from "@/types/project.types";
 import { DefaultBarChart } from "@/components/ui/default-bar-chart";
 import { RoundedPieChart } from "@/components/ui/rounded-pie-chart";
 
@@ -23,45 +24,64 @@ export default function Dashboard() {
   );
 
   const [stats, setStats] = useState<StatInfo | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (!currentOrganization) {
         setStats(null);
+        setProjects([]);
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        const response = await axiosInstance.get("/stats", {
-          params: {
-            organization_id: currentOrganization,
-          },
-        });
-        setStats(response.data);
+
+        const [statsResponse, projectsResponse] = await Promise.all([
+          axiosInstance.get("/stats", {
+            params: { organization_id: currentOrganization },
+          }),
+          axiosInstance.get("/projects_info", {
+            params: {
+              organization_id: currentOrganization,
+              page: 1,
+              per_page: 100,
+            },
+          }),
+        ]);
+
+        setStats(statsResponse.data);
+        setProjects(projectsResponse.data.items || []);
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        console.error("Error fetching dashboard data:", error);
         setStats(null);
+        setProjects([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchData();
   }, [currentOrganization]);
+
+  const documentsPerProject: Record<string, number> = {};
+
+  projects.forEach((project) => {
+    documentsPerProject[project.project_name] = project.number_of_documents;
+  });
 
   const statData = stats || {
     total_count: 0,
     projects_count: 0,
-    status_counts: {},
+    status_counts: {} as Record<string, number>,
   };
 
-  const statusCounts = statData.status_counts || {};
-  const readyCount = statusCounts["embedded"] || 0;
-  const queuedCount = statusCounts["queued"] || 0;
-  const processingCount = statusCounts["parsing"] || 0;
+  const statusCounts = statData.status_counts || ({} as Record<string, number>);
+  const readyCount = statusCounts["Ready for Search"] || 0;
+  const pendingCount = statusCounts["Pending"] || 0;
+  const queuedEmbeddingCount = statusCounts["Queued for Embedding"] || 0;
 
   if (loading) {
     return (
@@ -119,18 +139,18 @@ export default function Dashboard() {
           </CardHeader>
         </Card>
 
-        <Card className="relative overflow-hidden border-chart-3/30">
+        <Card className="relative overflow-hidden border-chart-2/30">
           <CardHeader>
             <CardDescription>Ready for Search</CardDescription>
-            <CardTitle className="text-3xl font-bold tabular-nums text-chart-3">
+            <CardTitle className="text-3xl font-bold tabular-nums text-chart-2">
               {readyCount}
             </CardTitle>
             <div className="absolute right-4 top-4">
               <Badge
                 variant="outline"
-                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-3/30"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-2/30"
               >
-                <FileClock className="h-5 w-5 text-chart-3" />
+                <FileClock className="h-5 w-5 text-chart-2" />
               </Badge>
             </div>
           </CardHeader>
@@ -138,9 +158,9 @@ export default function Dashboard() {
 
         <Card className="relative overflow-hidden border-chart-1/30">
           <CardHeader>
-            <CardDescription>Queued</CardDescription>
+            <CardDescription>Pending</CardDescription>
             <CardTitle className="text-3xl font-bold tabular-nums text-chart-1">
-              {queuedCount}
+              {pendingCount}
             </CardTitle>
             <div className="absolute right-4 top-4">
               <Badge
@@ -153,18 +173,18 @@ export default function Dashboard() {
           </CardHeader>
         </Card>
 
-        <Card className="relative overflow-hidden border-chart-5/30">
+        <Card className="relative overflow-hidden border-chart-4/30">
           <CardHeader>
-            <CardDescription>Processing</CardDescription>
-            <CardTitle className="text-3xl font-bold tabular-nums text-chart-5">
-              {processingCount}
+            <CardDescription>Queued for Embedding</CardDescription>
+            <CardTitle className="text-3xl font-bold tabular-nums text-chart-4">
+              {queuedEmbeddingCount}
             </CardTitle>
             <div className="absolute right-4 top-4">
               <Badge
                 variant="outline"
-                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-5/30"
+                className="h-10 w-10 rounded-full p-0 flex items-center justify-center border-chart-4/30"
               >
-                <ClockArrowDown className="h-5 w-5 text-chart-5" />
+                <ClockArrowDown className="h-5 w-5 text-chart-4" />
               </Badge>
             </div>
           </CardHeader>
@@ -172,9 +192,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2">
-        <DefaultBarChart statusCounts={statusCounts} />
+        <DefaultBarChart documentsPerProject={documentsPerProject} />
         <RoundedPieChart
-          statusCounts={statusCounts}
+          documentTypeDistribution={statusCounts}
           totalCount={statData.total_count}
         />
       </div>

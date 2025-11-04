@@ -1,3 +1,4 @@
+import axiosInstance from "@/axios";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Upload, X } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
 interface Project {
@@ -24,17 +25,18 @@ export default function UploadDocuments({
   project,
   selectedFiles,
   setSelectedFiles,
-  uploadingFiles,
-  handleUploadFiles,
+  currentOrganization,
+  fetchDocuments,
 }: {
   uploadDialogOpen: boolean;
   setUploadDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   project: Project | null;
   selectedFiles: File[];
   setSelectedFiles: React.Dispatch<React.SetStateAction<File[]>>;
-  uploadingFiles: string[];
-  handleUploadFiles: () => Promise<void>;
+  currentOrganization: string | null;
+  fetchDocuments: () => Promise<void>;
 }) {
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -48,6 +50,44 @@ export default function UploadDocuments({
     multiple: true,
     noClick: false,
   });
+
+  const handleUploadFiles = async () => {
+    if (!currentOrganization || !project || selectedFiles.length === 0) return;
+
+    setUploadingFiles(selectedFiles.map((f) => f.name));
+
+    for (const file of selectedFiles) {
+      try {
+        const formData = new FormData();
+        formData.append("document", file);
+        formData.append("organization_id", currentOrganization);
+        formData.append("project_id", project?.project_id || "");
+        formData.append("document_name", file.name);
+        const metadata = {
+          title: file.name,
+          url: file.name,
+        };
+        formData.append("metadata", JSON.stringify(metadata));
+
+        await axiosInstance.post("/upload_document", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
+      } catch (error) {
+        console.error(`Upload failed for ${file.name}:`, error);
+        alert(`Failed to upload ${file.name}`);
+        setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
+      }
+    }
+
+    setSelectedFiles([]);
+    setUploadDialogOpen(false);
+    fetchDocuments();
+  };
+
   return (
     <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
       <DialogTrigger asChild>

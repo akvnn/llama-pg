@@ -14,54 +14,36 @@ import {
 } from "@/components/ui/chart";
 
 interface DefaultBarChartProps {
-  statusCounts?: Record<string, number>;
+  documentsPerProject?: Record<string, number>;
 }
 
 const chartConfig = {
   count: {
     label: "Documents",
-    color: "var(--chart-1)",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
-export function DefaultBarChart({ statusCounts }: DefaultBarChartProps) {
-  const chartData = statusCounts
-    ? Object.entries(statusCounts).map(([status, count]) => ({
-        status: status.charAt(0).toUpperCase() + status.slice(1),
+export function DefaultBarChart({ documentsPerProject }: DefaultBarChartProps) {
+  const chartData = documentsPerProject
+    ? Object.entries(documentsPerProject).map(([project, count]) => ({
+        project,
         count,
-        fill: getStatusColor(status),
+        fill: "var(--color-count)",
       }))
     : [];
 
-  function getStatusColor(status: string): string {
-    const isDark = document.documentElement.classList.contains("dark");
-    const colors: Record<string, string> = isDark
-      ? {
-          queued: "#c9a030",
-          parsing: "#5fcba4",
-          embedded: "#8b5cf6",
-          failed: "#d946ef",
-        }
-      : {
-          queued: "#4b5563",
-          parsing: "#06b6d4",
-          embedded: "#f59e0b",
-          failed: "#eab308",
-        };
-    return colors[status] || (isDark ? "#f87171" : "#ec4899");
-  }
-
   const total = chartData.reduce((sum, item) => sum + item.count, 0);
 
-  if (!statusCounts || chartData.length === 0) {
+  if (!documentsPerProject || chartData.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Document Processing Status</CardTitle>
-          <CardDescription>No documents yet</CardDescription>
+          <CardTitle>Documents per Project</CardTitle>
+          <CardDescription>No projects yet</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
-          <p>Upload documents to see processing status</p>
+          <p>Create projects to see distribution</p>
         </CardContent>
       </Card>
     );
@@ -70,9 +52,9 @@ export function DefaultBarChart({ statusCounts }: DefaultBarChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Document Processing Status</CardTitle>
+        <CardTitle>Documents per Project</CardTitle>
         <CardDescription>
-          Distribution of {total} documents across processing stages
+          Distribution of {total} documents across {chartData.length} project{chartData.length !== 1 ? "s" : ""}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -84,7 +66,7 @@ export function DefaultBarChart({ statusCounts }: DefaultBarChartProps) {
               opacity={0.3}
             />
             <XAxis
-              dataKey="status"
+              dataKey="project"
               tickLine={false}
               tickMargin={10}
               axisLine={false}

@@ -15,50 +15,11 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
 
   const currentOrganization = useOrganizationStore(
     (state) => state.currentOrganization
   );
   const currentProject = useProjectStore((state) => state.currentProject);
-
-  const handleUploadFiles = async () => {
-    if (!currentOrganization || !currentProject || selectedFiles.length === 0)
-      return;
-
-    setUploadingFiles(selectedFiles.map((f) => f.name));
-
-    for (const file of selectedFiles) {
-      try {
-        const formData = new FormData();
-        formData.append("document", file);
-        formData.append("organization_id", currentOrganization);
-        formData.append("project_id", currentProject);
-        formData.append("document_name", file.name);
-        const metadata = {
-          title: file.name,
-          url: file.name,
-        };
-        formData.append("metadata", JSON.stringify(metadata));
-
-        await axiosInstance.post("/upload_document", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
-        setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
-      } catch (error) {
-        console.error(`Upload failed for ${file.name}:`, error);
-        alert(`Failed to upload ${file.name}`);
-        setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
-      }
-    }
-
-    setSelectedFiles([]);
-    setUploadDialogOpen(false);
-    fetchDocuments();
-  };
 
   const fetchProject = useCallback(async () => {
     if (!currentOrganization || !currentProject) return;
@@ -164,8 +125,8 @@ export default function Documents() {
             project={project}
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
-            handleUploadFiles={handleUploadFiles}
-            uploadingFiles={uploadingFiles}
+            currentOrganization={currentOrganization}
+            fetchDocuments={fetchDocuments}
           />
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -171,18 +171,6 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     enableGlobalFilter: false,
   },
   {
-    accessorKey: "updated_at",
-    header: () => "Updated At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.original.updated_at
-          ? new Date(row.original.updated_at).toLocaleDateString()
-          : "N/A"}
-      </span>
-    ),
-    enableGlobalFilter: false,
-  },
-  {
     id: "actions",
     cell: () => (
       <DropdownMenu>

@@ -107,14 +107,12 @@ function DragHandle({ id }: { id: string }) {
 }
 
 const getStatusIcon = (status: string) => {
-  if (status === "Ready for Search") {
+  status = status.toLowerCase();
+  if (status.includes("ready")) {
     return <CircleCheck className="fill-chart-3 text-chart-3" />;
-  } else if (status === "Pending") {
+  } else if (status.includes("pending")) {
     return <CloudUpload className="text-chart-5" />;
-  } else if (
-    status === "Queued for Parsing" ||
-    status === "Queued for Embedding"
-  ) {
+  } else if (status.includes("queued")) {
     return <FileCheck2 className="text-chart-1" />;
   }
   return <FileCog className="text-muted-foreground" />;
@@ -213,6 +211,16 @@ const columns: ColumnDef<Document>[] = [
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {new Date(row.original.created_at).toLocaleDateString()}
+      </span>
+    ),
+    enableGlobalFilter: false,
+  },
+  {
+    accessorKey: "uploaded_by",
+    header: () => "Uploaded By",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.uploaded_by_user_id || "No uploader"}
       </span>
     ),
     enableGlobalFilter: false,

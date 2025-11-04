@@ -1,4 +1,4 @@
-import { LabelList, Pie, PieChart } from "recharts";
+import { Pie, PieChart } from "recharts";
 
 import {
   Card,
@@ -12,72 +12,59 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart";
 
 interface RoundedPieChartProps {
-  statusCounts?: Record<string, number>;
+  documentTypeDistribution?: Record<string, number>;
   totalCount?: number;
 }
 
-const chartConfig = {
-  Pending: {
-    label: "Pending",
-    color: "#FFFFFF",
-  },
-  documents: {
-    label: "Documents",
-  },
-  embedded: {
-    label: "Ready",
-    color: "#FFFFFF",
-  },
-  parsing: {
-    label: "Processing",
-    color: "var(--chart-2)",
-  },
-  queued: {
-    label: "Queued",
-    color: "var(--chart-3)",
-  },
-  failed: {
-    label: "Failed",
-    color: "var(--chart-4)",
-  },
-} satisfies ChartConfig;
+const statusColors: Record<string, string> = {
+  "Ready for Search": "var(--chart-2)",
+  Pending: "var(--chart-1)",
+  "Queued for Parsing": "var(--chart-4)",
+  "Queued for Embedding": "var(--chart-5)",
+  Failed: "var(--destructive)",
+};
+
+const generateChartConfig = (statuses: string[]): ChartConfig => {
+  const config: ChartConfig = {
+    documents: {
+      label: "Documents",
+    },
+  };
+
+  statuses.forEach((status) => {
+    config[status] = {
+      label: status,
+      color: statusColors[status] || "var(--chart-4)",
+    };
+  });
+
+  return config;
+};
 
 export function RoundedPieChart({
-  statusCounts,
+  documentTypeDistribution,
   totalCount = 0,
 }: RoundedPieChartProps) {
-  const chartData = statusCounts
-    ? Object.entries(statusCounts)
+  const chartData = documentTypeDistribution
+    ? Object.entries(documentTypeDistribution)
         .filter(([_, count]) => count > 0)
-        .map(([status, count]) => ({
-          status: status.charAt(0).toUpperCase() + status.slice(1),
+        .map(([type, count]) => ({
+          type,
           documents: count,
-          fill: getStatusColor(status),
+          fill: statusColors[type] || "var(--chart-4)",
         }))
     : [];
 
-  function getStatusColor(status: string): string {
-    const isDark = document.documentElement.classList.contains("dark");
-    const colors: Record<string, string> = isDark
-      ? {
-          queued: "#c9a030",
-          parsing: "#5fcba4",
-          embedded: "#8b5cf6",
-          failed: "#d946ef",
-        }
-      : {
-          queued: "#4b5563",
-          parsing: "#06b6d4",
-          embedded: "#f59e0b",
-          failed: "#eab308",
-        };
-    return colors[status] || (isDark ? "#f87171" : "#ec4899");
-  }
+  const chartConfig = generateChartConfig(
+    documentTypeDistribution ? Object.keys(documentTypeDistribution) : []
+  );
 
-  if (!statusCounts || chartData.length === 0) {
+  if (!documentTypeDistribution || chartData.length === 0) {
     return (
       <Card className="flex flex-col">
         <CardHeader className="items-center pb-0">
@@ -102,7 +89,7 @@ export function RoundedPieChart({
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="[&_.recharts-text]:fill-background mx-auto aspect-square max-h-[250px]"
+          className="mx-auto aspect-square max-h-[300px]"
         >
           <PieChart>
             <ChartTooltip
@@ -110,21 +97,17 @@ export function RoundedPieChart({
             />
             <Pie
               data={chartData}
-              innerRadius={30}
+              innerRadius={60}
               dataKey="documents"
+              nameKey="type"
               radius={10}
               cornerRadius={8}
               paddingAngle={4}
-            >
-              <LabelList
-                dataKey="documents"
-                stroke="none"
-                fontSize={12}
-                fontWeight={500}
-                fill="currentColor"
-                formatter={(value: number) => value.toString()}
-              />
-            </Pie>
+            />
+            <ChartLegend
+              content={<ChartLegendContent nameKey="type" />}
+              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+            />
           </PieChart>
         </ChartContainer>
       </CardContent>

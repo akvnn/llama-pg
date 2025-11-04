@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   CircleGauge,
-  Crown,
   UserPlus,
   Building2,
   Search,
@@ -38,6 +37,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { logout } from "@/lib/auth";
+import LlamaLogo from "@/assets/LlamaLogo";
 
 const data = {
   navMain: [
@@ -77,8 +77,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <Crown className="!size-5" />
+              <a href="/">
+                <div className="h-8 w-8">
+                  <LlamaLogo theme={theme} />
+                </div>
                 <span className="text-base font-semibold">Llama-pg</span>
               </a>
             </SidebarMenuButton>
@@ -133,7 +135,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                           <Link to="/user-org">
                             <Building2 />
-                            <span>Organizations</span>
+                            <span>Organization</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
