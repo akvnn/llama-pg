@@ -9,3 +9,4 @@ class ProjectInfo(BaseModel):
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
     description: str | None = None
+    created_by_user_id: str | None = None

@@ -5,6 +5,7 @@ import asyncio
 from fastapi import HTTPException
 
 from src.models.pagination import PaginationResponse
+from src.models.project import ProjectInfo
 from src.models.system import StatInfo, SystemResponse
 
 # Set Windows-compatible event loop policy
@@ -164,7 +165,8 @@ class WorkerClient:
                     await cur.execute(
                         f"""
                         SELECT * FROM "{schemaname}".{TableNames.reserved_document_table_name} 
-                        WHERE status = %s OR status = %s;
+                        WHERE (status = %s OR status = %s)
+                        AND deleted_at IS NULL
                         """,
                         (
                             DocumentStatus.PENDING.value,
@@ -296,6 +298,27 @@ class WorkerClient:
             f"Uploaded {len(parsed_documents)} parsed documents to the database"
         )
 
+    async def soft_delete_document(
+        self, organization_id: str, user_id: str, document_id: str
+    ) -> bool:
+        await db.connect()
+        async with db.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f"""
+                        UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
+                        SET deleted_at = NOW(), deleted_by_user_id = %s
+                        WHERE id = %s
+                        AND deleted_at IS NULL
+                        """,
+                    (
+                        user_id,
+                        document_id,
+                    ),
+                )
+                # TODO: soft delete from pgai embeddings as well and make pgai worker ignore soft-deleted documents
+                return cur.rowcount == 1
+
     async def get_all_projects(self, organization_id: str):
         await db.connect()
         async with db.connection() as conn:
@@ -307,11 +330,37 @@ class WorkerClient:
                 )
                 projects = await cur.fetchall()
                 return [str(project[0]) for project in projects]
-                # column_names = [desc[0] for desc in cur.description]
-                # projects_list = [
-                #     dict(zip(column_names, project)) for project in projects
-                # ]
-                # return projects_list
+
+    async def get_all_projects_details(
+        self, organization_id: str
+    ) -> PaginationResponse:
+        await db.connect()
+        async with db.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f"""
+                        SELECT p.id::text as project_id, 
+                        p.name as project_name, 
+                        COUNT(d.id) as number_of_documents,
+                        p.created_at, 
+                        p.updated_at, 
+                        p.description, 
+                        p.created_by_user_id::text
+                        FROM "{organization_id}".{TableNames.reserved_project_table_name} p 
+                        LEFT JOIN "{organization_id}".{TableNames.reserved_document_table_name} d
+                        ON p.id = d.project_id
+                        WHERE d.deleted_at IS NULL
+                        GROUP BY p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at
+                        ORDER BY p.name;
+                        """,
+                )
+                projects = await cur.fetchall()
+                column_names = [desc[0] for desc in cur.description]
+                projects_info = [
+                    ProjectInfo(**dict(zip(column_names, project)))
+                    for project in projects
+                ]
+                return PaginationResponse(items=projects_info)
 
     async def get_recent_documents_info(
         self, organization_id: str, projects: list, skip: int, limit: int
@@ -323,6 +372,7 @@ class WorkerClient:
                     f"""
                     SELECT COUNT(*) FROM "{organization_id}".{TableNames.reserved_document_table_name} as d
                     WHERE d.project_id = ANY(%s)
+                    AND d.deleted_at IS NULL
                 """,
                     (projects,),
                 )
@@ -334,6 +384,7 @@ class WorkerClient:
                     JOIN "{organization_id}".{TableNames.reserved_project_table_name} p
                     ON d.project_id = p.id
                     WHERE d.project_id = ANY(%s)
+                    AND d.deleted_at IS NULL
                     ORDER BY d.created_at DESC
                     LIMIT %s OFFSET %s
                 """,
@@ -372,7 +423,8 @@ class WorkerClient:
                 await cur.execute(
                     f"""
                             SELECT id, parsed_document, document_uploaded_name, document_bytes, metadata, status, summary, created_at, uploaded_by_user_id FROM "{organization_id}".{TableNames.reserved_document_table_name}
-                            WHERE id = %s;
+                            WHERE id = %s
+                            AND deleted_at IS NULL;
                             """,
                     (document_id,),
                 )
@@ -428,6 +480,7 @@ class WorkerClient:
                     LEFT JOIN "{organization_id}".{TableNames.reserved_document_table_name} d
                     ON p.id = d.project_id
                     WHERE p.id = ANY(%s)
+                    AND d.deleted_at IS NULL
                     GROUP BY p.id, p.name, p.description
                     ORDER BY p.name;
                     """,
@@ -463,8 +516,9 @@ class WorkerClient:
             async with conn.cursor() as cur:
                 await cur.execute(
                     f"""
-                            SELECT status, COUNT(status) FROM "{organization_id}".document
+                            SELECT status, COUNT(status) FROM "{organization_id}".{TableNames.reserved_document_table_name}
                             WHERE project_id = ANY(%s)
+                            AND deleted_at IS NULL
                             GROUP BY status
                             """,
                     (projects,),

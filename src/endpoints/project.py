@@ -58,13 +58,13 @@ async def create_project(
         )
 
 
-@router.get("/projects")
+@router.get("/projects", response_model=PaginationResponse)
 async def get_projects(
-    request: ParamRequest = Depends(),
+    request: ParamRequest = Depends(),  # note, project_id is not considered here.
     user_id: str = Depends(get_current_user_id),
     worker_client: WorkerClient = Depends(get_worker_client),
 ):
-    """Endpoint to retrieve all projects"""
+    """Endpoint to retrieve all projects with details"""
     try:
         user_has_access = await worker_client.check_user_access_to_organization(
             organization_id=request.organization_id,
@@ -78,10 +78,10 @@ async def get_projects(
                     "message": "Organization does not exist or user does not have access."
                 },
             )
-        projects = await worker_client.get_all_projects(
+        resp = await worker_client.get_all_projects_details(
             organization_id=request.organization_id
         )
-        return JSONResponse(status_code=200, content={"data": projects})
+        return resp
     except HTTPException:
         raise
     except Exception as e:

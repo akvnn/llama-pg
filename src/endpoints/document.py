@@ -39,7 +39,7 @@ async def upload_document(
             return JSONResponse(
                 status_code=404,
                 content={
-                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    "message": "Project does not exist or user does not have access."
                 },
             )
         document_bytes = await document.read()
@@ -75,6 +75,50 @@ async def upload_document(
         )
 
 
+@router.delete("/delete_document")
+async def delete_document(
+    user_id: str = Depends(get_current_user_id),
+    params: DocumentParamsRequest = Depends(),
+    worker_client: WorkerClient = Depends(get_worker_client),
+):
+    try:
+        document_id = str(params.document_id)
+        project_id = params.project_id
+        organization_id = params.organization_id
+        # Validate if the user has access to the organization and project
+        project_exists = await worker_client.check_user_access_to_project(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            roles_allowed=["admin", "owner"],
+        )
+        if not project_exists:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": "Project does not exist or user does not have access."
+                },
+            )
+        is_success = await worker_client.soft_delete_document(
+            organization_id=organization_id,
+            user_id=user_id,
+            document_id=document_id,
+        )
+        if is_success:
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Document deleted successfully"},
+            )
+        else:
+            raise Exception("Something went wrong")
+    except Exception as e:
+        logger.error(f"Error deleting document: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Error deleting document from project"},
+        )
+
+
 @router.get("/recent_documents_info", response_model=PaginationResponse)
 async def get_recent_documents_info(
     user_id: str = Depends(get_current_user_id),
@@ -99,7 +143,7 @@ async def get_recent_documents_info(
                 return JSONResponse(
                     status_code=404,
                     content={
-                        "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                        "message": "Project does not exist or user does not have access."
                     },
                 )
             projects = [project_id]

@@ -35,7 +35,9 @@ async def create_org_schema(cur, org_id: str):
             status TEXT,
             summary TEXT,
             uploaded_by_user_id UUID,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            deleted_at TIMESTAMPTZ,
+            deleted_by_user_id UUID
         );
     """)
 
