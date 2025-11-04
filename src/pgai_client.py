@@ -1,7 +1,6 @@
 import json
 import sys
 import asyncio
-import uuid
 
 # Set Windows-compatible event loop policy
 if sys.platform == "win32":
@@ -26,43 +25,6 @@ os.environ["OPENAI_BASE_URL"] = config.OPENAI_BASE_URL
 class PGAIClient:
     def __init__(self, config: Settings = Settings()):
         self.config = config
-
-    async def load_documents_to_db(self, organization_id, project_id, documents):
-        """
-        Load your parsed documents into the database.
-        The vectorizer worker will automatically generate embeddings for these documents.
-        """
-        await db.connect()
-
-        # Convert project_id once
-        project_uuid = (
-            uuid.UUID(project_id) if isinstance(project_id, str) else project_id
-        )
-
-        # Prepare all records in advance
-        records = []
-        for doc in documents:
-            content = doc.text if hasattr(doc, "text") else str(doc)
-            metadata = doc.metadata if hasattr(doc, "metadata") else []
-            title = (
-                metadata.get("title", "")
-                if isinstance(metadata, dict)
-                else getattr(metadata, "title", "")
-            )
-            records.append((title, metadata, content, project_uuid))
-
-        # Single batch insert
-        async with db.connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.executemany(
-                    f"""
-                    INSERT INTO "{organization_id}".{TableNames.reserved_pgai_table_name} 
-                    (title, metadata, text, project_id) 
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    records,
-                )
-            await conn.commit()
 
     async def find_relevant_chunks(
         self, query: str, limit: int, organization_id: str, project_id: str
@@ -95,6 +57,7 @@ class PGAIClient:
                         SELECT w.id, w.project_id, w.title, w.metadata, w.text, w.chunk, w.embedding <=> %s as distance
                             FROM "{organization_id}".{TableNames.reserved_pgai_table_name}_embedding w
                             WHERE w.project_id = %s
+                            AND w.deleted_at IS NULL
                             ORDER BY distance
                             LIMIT %s
                     """,

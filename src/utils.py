@@ -1,6 +1,6 @@
 from src.configuration import config
 from src.constant import TableNames
-# from src.models.document import DocumentStatus
+from src.models.document import DocumentStatus
 
 
 async def create_org_schema(cur, org_id: str):
@@ -48,7 +48,8 @@ async def create_org_schema(cur, org_id: str):
                         title TEXT NOT NULL,
                         metadata JSONB,
                         text TEXT NOT NULL,
-                        project_id UUID
+                        project_id UUID,
+                        deleted_at TIMESTAMPTZ
                     )
                 """)
     # Create PGAI Vectorizer (embedding table)
@@ -65,26 +66,35 @@ async def create_org_schema(cur, org_id: str):
                         name => '{org_id_safe}_vectorizer'
                     )
                 """)
-    # TODO: create trigger
-    # # Create trigger to update document status after vectorization
-
-    # await cur.execute(f"""
-    #     CREATE OR REPLACE FUNCTION update_embedding_status_{org_id_safe}()
-    #     RETURNS TRIGGER AS $$
-    #     BEGIN
-    #         UPDATE "{org_id}".document
-    #         SET status = '{DocumentStatus.READY.value}',
-    #             embedded_at = NOW()
-    #         WHERE id = NEW.id;
-
-    #         RETURN NEW;
-    #     END;
-    #     $$ LANGUAGE plpgsql;
-
-    #     DROP TRIGGER IF EXISTS after_vectorization ON "{org_id}".{TableNames.reserved_pgai_table_name}_embedding;
-
-    #     CREATE TRIGGER after_vectorization
-    #     AFTER INSERT ON "{org_id}".{TableNames.reserved_pgai_table_name}_embedding
-    #     FOR EACH ROW
-    #     EXECUTE FUNCTION update_embedding_status_{org_id_safe}();
-    # """)
+    # Create trigger to update document status after vectorization
+    await cur.execute(f"""
+            CREATE OR REPLACE FUNCTION update_embedding_status_{org_id_safe}()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                doc_id UUID;
+            BEGIN
+                -- Extract document_id from metadata in the view
+                SELECT (metadata->>'id')::uuid INTO doc_id
+                FROM "{org_id}".{TableNames.reserved_pgai_table_name}_embedding
+                WHERE embedding_uuid = NEW.embedding_uuid
+                LIMIT 1;
+                
+                -- Update document status if document_id was found
+                IF doc_id IS NOT NULL THEN
+                    UPDATE "{org_id}".document
+                    SET status = '{DocumentStatus.READY.value}',
+                        embedded_at = NOW()
+                    WHERE id = doc_id;
+                END IF;
+                
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            
+            DROP TRIGGER IF EXISTS after_vectorization ON "{org_id}".{TableNames.reserved_pgai_table_name}_embedding_store;
+            
+            CREATE TRIGGER after_vectorization
+            AFTER INSERT ON "{org_id}".{TableNames.reserved_pgai_table_name}_embedding_store
+            FOR EACH ROW
+            EXECUTE FUNCTION update_embedding_status_{org_id_safe}();
+        """)

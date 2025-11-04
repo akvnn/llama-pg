@@ -301,23 +301,44 @@ class WorkerClient:
     async def soft_delete_document(
         self, organization_id: str, user_id: str, document_id: str
     ) -> bool:
-        await db.connect()
-        async with db.connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    f"""
-                        UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
-                        SET deleted_at = NOW(), deleted_by_user_id = %s
-                        WHERE id = %s
-                        AND deleted_at IS NULL
-                        """,
-                    (
-                        user_id,
-                        document_id,
-                    ),
-                )
-                # TODO: soft delete from pgai embeddings as well and make pgai worker ignore soft-deleted documents
-                return cur.rowcount == 1
+        try:
+            await db.connect()
+            async with db.connection() as conn:
+                async with conn.transaction():
+                    async with conn.cursor() as cur:
+                        await cur.execute(
+                            f"""
+                                UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
+                                SET deleted_at = NOW(), deleted_by_user_id = %s
+                                WHERE id = %s
+                                AND deleted_at IS NULL
+                                """,
+                            (
+                                user_id,
+                                document_id,
+                            ),
+                        )
+                        if cur.rowcount != 1:
+                            logger.warning(
+                                f"Document '{document_id}' to be deleted was not found or is already deleted"
+                            )
+                            raise Exception(
+                                "Document to be deleted was not found or is already deleted"
+                            )
+                        await cur.execute(
+                            f"""
+                                UPDATE "{organization_id}".{TableNames.reserved_pgai_table_name}
+                                SET deleted_at = NOW()
+                                WHERE (metadata->>'id') = %s
+                                AND deleted_at IS NULL
+                                """,
+                            (document_id,),
+                        )
+                        return True  # might still not be in pgai table, so always return True
+
+        except Exception as e:
+            logger.error(f"Error deleting document: {e}")
+            raise
 
     async def get_all_projects(self, organization_id: str):
         await db.connect()
