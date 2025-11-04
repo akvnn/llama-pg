@@ -13,7 +13,7 @@ async def create_org_schema(cur, org_id: str):
 
     # Create project table
     await cur.execute(f"""
-        CREATE TABLE "{org_id}".project (
+        CREATE TABLE "{org_id}".{TableNames.reserved_project_table_name} (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name TEXT,
             description TEXT,
@@ -25,7 +25,7 @@ async def create_org_schema(cur, org_id: str):
 
     # Create document table
     await cur.execute(f"""
-        CREATE TABLE "{org_id}".document (
+        CREATE TABLE "{org_id}".{TableNames.reserved_document_table_name} (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             project_id UUID NOT NULL REFERENCES "{org_id}".project(id) ON DELETE CASCADE,
             parsed_document TEXT,
@@ -81,7 +81,7 @@ async def create_org_schema(cur, org_id: str):
                 
                 -- Update document status if document_id was found
                 IF doc_id IS NOT NULL THEN
-                    UPDATE "{org_id}".document
+                    UPDATE "{org_id}".{TableNames.reserved_document_table_name}
                     SET status = '{DocumentStatus.READY.value}',
                         embedded_at = NOW()
                     WHERE id = doc_id;
