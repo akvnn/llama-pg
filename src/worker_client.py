@@ -400,7 +400,14 @@ class WorkerClient:
                 total_count = (await cur.fetchone())[0]
                 await cur.execute(
                     f"""
-                    SELECT d.id as document_id, d.document_uploaded_name, d.metadata, d.status, d.uploaded_by_user_id, d.created_at, d.project_id, p.name as project_name
+                    SELECT d.id as document_id,
+                    d.document_uploaded_name, 
+                    d.metadata, 
+                    d.status, 
+                    (SELECT username FROM users u WHERE u.id = d.uploaded_by_user_id) as uploaded_by_user_name, 
+                    d.created_at, 
+                    d.project_id, 
+                    p.name as project_name
                     FROM "{organization_id}".{TableNames.reserved_document_table_name} d
                     JOIN "{organization_id}".{TableNames.reserved_project_table_name} p
                     ON d.project_id = p.id
@@ -443,10 +450,18 @@ class WorkerClient:
             async with conn.cursor() as cur:
                 await cur.execute(
                     f"""
-                            SELECT id, parsed_document, document_uploaded_name, document_bytes, metadata, status, summary, created_at, uploaded_by_user_id FROM "{organization_id}".{TableNames.reserved_document_table_name}
-                            WHERE id = %s
-                            AND deleted_at IS NULL;
-                            """,
+                        SELECT d.id, d.parsed_document, 
+                        d.document_uploaded_name, 
+                        d.document_bytes, 
+                        d.metadata, 
+                        d.status, 
+                        d.summary, 
+                        d.created_at, 
+                        (SELECT username FROM users u WHERE u.id = d.uploaded_by_user_id) as uploaded_by_user_name 
+                        FROM "{organization_id}".{TableNames.reserved_document_table_name} d
+                        WHERE d.id = %s
+                        AND d.deleted_at IS NULL;
+                        """,
                     (document_id,),
                 )
                 document = await cur.fetchone()
@@ -461,7 +476,7 @@ class WorkerClient:
                     status,
                     summary,
                     created_at,
-                    uploaded_by_user_id,
+                    uploaded_by_user_name,
                 ) = document
                 if parsed_document:
                     parsed_document = pickle.loads(parsed_document)
@@ -484,7 +499,7 @@ class WorkerClient:
                     parsed_markdown_text=parsed_markdown_text,
                     file_bytes=document_bytes,  # will be converted to base64
                     summary=summary if summary else "",
-                    uploaded_by_user_id=uploaded_by_user_id,
+                    uploaded_by_user_name=uploaded_by_user_name,
                 )
 
     async def get_projects_info(

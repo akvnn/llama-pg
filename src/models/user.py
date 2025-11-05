@@ -19,7 +19,7 @@ class UserRequest(BaseModel):
 
 class UserResponse(BaseModel):
     token: str
-    user_org_ids: list[UUID]
+    org_ids: list[UUID]
 
 
 class CreateOrganizationRequest(BaseModel):

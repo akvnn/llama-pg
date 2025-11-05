@@ -43,7 +43,7 @@ class DocumentInfo(BaseModel):
     document_uploaded_name: str
     metadata: dict
     status: DocumentStatus
-    uploaded_by_user_id: uuid.UUID
+    uploaded_by_user_name: str
     created_at: datetime.datetime
     project_id: uuid.UUID
     project_name: str
@@ -61,7 +61,7 @@ class DocumentDetail(BaseModel):
     parsed_markdown_text: str | None = None
     file_bytes: str
     summary: str | None = None
-    uploaded_by_user_id: uuid.UUID
+    uploaded_by_user_name: str
 
     @field_validator("file_bytes", mode="before")
     @classmethod

@@ -33,7 +33,7 @@ async def login(body: UserRequest, pool=Depends(get_db_pool)):
                 await cur.execute(
                     """
                         SELECT u.id, u.username, u.password_hash,
-                        COALESCE(ARRAY_AGG(uo.org_id) FILTER (WHERE uo.org_id IS NOT NULL), ARRAY[]::uuid[]) as user_org_ids
+                        COALESCE(ARRAY_AGG(uo.org_id) FILTER (WHERE uo.org_id IS NOT NULL), ARRAY[]::uuid[]) as org_ids
                         FROM users u
                         LEFT JOIN user_org uo ON u.id = uo.user_id
                         WHERE u.username = %s
@@ -61,7 +61,7 @@ async def login(body: UserRequest, pool=Depends(get_db_pool)):
                     (str(user[0]),),
                 )
                 await conn.commit()
-        return UserResponse(token=token, user_org_ids=user[3])
+        return UserResponse(token=token, org_ids=user[3])
 
     except HTTPException:
         raise
@@ -140,7 +140,7 @@ async def signup(body: UserRequest, pool=Depends(get_db_pool)):
                     await create_org_schema(cur, str(org_result[0]))
                     token = generate_jwt_token(user_id=str(user_result[0]))
                     # await conn.commit() # transaction commits automatically
-        return UserResponse(token=token, user_org_ids=[org_result[0]])
+        return UserResponse(token=token, org_ids=[org_result[0]])
 
     except HTTPException:
         raise
