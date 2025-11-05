@@ -1,0 +1,22 @@
+apiVersion: v2
+name: llama-pg
+description: A Helm chart for llama-pg RaaS orchestrator
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: api
+    version: "0.1.0"
+    repository: file://charts/api
+  - name: worker
+    version: "0.1.0"
+    repository: file://charts/worker
+    condition: worker.enabled
+  - name: redis-ha
+    version: "4.35.2"
+    repository: https://dandydeveloper.github.io/charts
+    condition: worker.enabled && worker.redis.enabled
+  - name: timescaledb
+    version: "0.1.1"
+    repository: https://akvnn.github.io/helm-timescaledb
+    condition: timescaledb.enabled

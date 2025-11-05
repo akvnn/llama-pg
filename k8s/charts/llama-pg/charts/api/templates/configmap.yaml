@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "api.fullname" . }}-config
+  labels:
+    app.kubernetes.io/name: {{ include "api.name" . }}
+    helm.sh/chart: {{ include "api.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+{{- if .Values.configMapEnv }}
+{{- range $key, $val := .Values.configMapEnv }}
+  {{ $key }}: {{ $val | quote }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,15 @@
+dependencies:
+- name: api
+  repository: file://charts/api
+  version: 0.1.0
+- name: worker
+  repository: file://charts/worker
+  version: 0.1.0
+- name: redis-ha
+  repository: https://dandydeveloper.github.io/charts
+  version: 4.35.2
+- name: timescaledb
+  repository: https://akvnn.github.io/helm-timescaledb
+  version: 0.1.1
+digest: sha256:3d71fbee2fb102bdb6719237695f858a96439d5335d73923fcb601c17aaddab8
+generated: "2025-11-05T11:48:01.7073458+04:00"

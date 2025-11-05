@@ -26,3 +26,6 @@ pgdata/
 
 # Misc
 manual*.py
+
+# Charts
+k8s/charts/*/charts/*.tgz
