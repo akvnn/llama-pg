@@ -5,5 +5,14 @@ interface ImportMetaEnv {
 }
 
 interface ImportMeta {
-  readonly env: ImportMeta;
+  readonly env: ImportMetaEnv;
 }
+
+declare global {
+  interface Window {
+    VITE_API_URL: string;
+    VITE_JWT_EXPIRES_IN: number;
+  }
+}
+
+export {};
