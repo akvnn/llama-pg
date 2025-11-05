@@ -66,7 +66,7 @@ export const login = async (username: string, password: string) => {
     });
 
     setToken(response.data.token);
-    setUser(username, response.data.user_org_ids);
+    setUser(username, response.data.org_ids);
 
     return response.data;
   } catch (error: any) {

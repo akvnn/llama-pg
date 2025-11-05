@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const data = await login(username, password);
 
     setIsAuthenticated(true);
-    setUser({ username, userOrgIds: data.user_org_ids });
+    setUser({ username, userOrgIds: data.org_ids });
   };
 
   const handleSignup = async (username: string, password: string) => {

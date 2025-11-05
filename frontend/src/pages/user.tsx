@@ -106,7 +106,7 @@ export default function User() {
       });
 
       if (isServiceAccount && currentOrganization) {
-        const userId = signupResponse.data.user_org_ids[0];
+        const userId = signupResponse.data.org_ids[0];
 
         if (userId !== currentOrganization) {
           try {
