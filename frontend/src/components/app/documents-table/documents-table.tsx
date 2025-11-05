@@ -145,11 +145,37 @@ const handleDownload = async (item: Document) => {
   }
 };
 
-const handleDelete = (item: Document) => {
-  alert(`Deleting document: ${item.document_uploaded_name}`);
+const handleDelete = async (item: Document, onSuccess?: () => void) => {
+  if (
+    !confirm(
+      `Are you sure you want to delete "${item.document_uploaded_name}"?`
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await axiosInstance.delete("/delete_document", {
+      params: {
+        document_id: item.document_id,
+        project_id: item.project_id,
+        organization_id: item.organization_id,
+      },
+    });
+
+    alert("Document deleted successfully");
+    if (onSuccess) {
+      onSuccess();
+    }
+  } catch (error: any) {
+    console.error("Error deleting document:", error);
+    alert(error.response?.data?.message || "Failed to delete document");
+  }
 };
 
-const columns: ColumnDef<Document>[] = [
+const createColumns = (
+  onDeleteSuccess: (documentId: string) => void
+): ColumnDef<Document>[] => [
   {
     id: "drag",
     header: () => null,
@@ -249,7 +275,11 @@ const columns: ColumnDef<Document>[] = [
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => handleDelete(row.original)}
+            onClick={() =>
+              handleDelete(row.original, () =>
+                onDeleteSuccess(row.original.document_id)
+              )
+            }
           >
             Delete
           </DropdownMenuItem>
@@ -319,6 +349,17 @@ export const DocumentsTable: React.FC<{
   );
 
   const [globalFilter, setGlobalFilter] = React.useState<[]>([]);
+
+  const handleDeleteSuccess = React.useCallback((documentId: string) => {
+    setData((prevData) =>
+      prevData.filter((doc) => doc.document_id !== documentId)
+    );
+  }, []);
+
+  const columns = React.useMemo(
+    () => createColumns(handleDeleteSuccess),
+    [handleDeleteSuccess]
+  );
 
   const table = useReactTable({
     data,
