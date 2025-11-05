@@ -47,11 +47,11 @@ async def find_relevant_chunks(
         for result in results:
             serializable_results.append(
                 {
-                    "id": result.id,
+                    "id": str(result.id),
                     "title": result.title,
                     "metadata": result.metadata,
                     "text": result.text,
-                    "project_id": result.project_id,
+                    "project_id": str(result.project_id),
                     "chunk": result.chunk,
                     "distance": result.distance,
                 }
