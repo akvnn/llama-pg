@@ -19,11 +19,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { Message } from "@/types/message.types";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function RAG() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [limit, setLimit] = useState(5);
+  const [systemPrompt, setSystemPrompt] = useState(
+    "You are a helpful AI assistant that answers questions based on the provided document context. Please provide accurate, concise responses and cite relevant information from the documents when possible. If the answer cannot be found in the provided context, please say so clearly."
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,6 +62,7 @@ export default function RAG() {
       const result = await axiosInstance.post<{ data: string }>("/rag", {
         query: input,
         limit,
+        system_prompt: systemPrompt,
         organization_id: currentOrganization,
         project_id: currentProject,
       });
@@ -115,6 +120,19 @@ export default function RAG() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Number of relevant document chunks to use for context
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="systemPrompt">System Prompt</Label>
+                <Textarea
+                  id="systemPrompt"
+                  className="w-full min-h-[100px] p-3 border border-input bg-background rounded-md resize-vertical"
+                  placeholder="Enter a system prompt to guide the AI's responses..."
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Instructions to customize how the AI responds
                 </p>
               </div>
             </div>

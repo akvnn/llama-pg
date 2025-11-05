@@ -84,6 +84,7 @@ export default function Search() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Enter your search query..."
                 disabled={!currentProject}
+                autoComplete="off"
               />
             </div>
             <div className="space-y-2">

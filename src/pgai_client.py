@@ -66,7 +66,7 @@ class PGAIClient:
                 results = await cur.fetchall()
                 return results
 
-    async def rag_query(self, query, limit, organization_id: str, project_id: str):
+    async def rag_query(self, query, system_prompt: str, limit, organization_id: str, project_id: str):
         """
         Perform RAG (Retrieval-Augmented Generation) using your documents.
         """
@@ -90,7 +90,7 @@ class PGAIClient:
             api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL
         )
         response = await client.chat.completions.create(
-            model=config.OPENAI_MODEL, messages=[{"role": "user", "content": prompt}]
+            model=config.OPENAI_MODEL, messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
         )
 
         return response.choices[0].message.content

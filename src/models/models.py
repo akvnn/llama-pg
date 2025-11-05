@@ -16,6 +16,7 @@ class RAGRequest(BaseModel):
     project_id: str
     organization_id: str
     query: str
+    system_prompt: str
     limit: Annotated[
         int, Field(default=5, ge=1, description="Number of results to return")
     ]

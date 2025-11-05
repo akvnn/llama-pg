@@ -82,6 +82,7 @@ async def rag(
     organization_id = request.organization_id
     query = request.query
     limit = request.limit
+    system_prompt = request.system_prompt
     try:
         project_exists = await worker_client.check_user_access_to_project(
             organization_id=organization_id,
@@ -99,6 +100,7 @@ async def rag(
         result = await pgai_client.rag_query(
             query=query,
             limit=limit,
+            system_prompt=system_prompt,
             organization_id=organization_id,
             project_id=project_id,
         )
