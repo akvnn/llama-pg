@@ -37,9 +37,7 @@ export default function Signup() {
     try {
       await handleSignup(username, password);
       setSuccess(true);
-      setUsername("");
-      setPassword("");
-      setConfirmPassword("");
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Signup failed");
     } finally {

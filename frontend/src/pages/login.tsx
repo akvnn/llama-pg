@@ -37,10 +37,6 @@ export default function Login() {
           <h2 className="text-center text-3xl font-bold tracking-tight">
             Sign in to your account
           </h2>
-          <p className="mt-2 text-center text-sm text-muted-foreground">
-            Default credentials: <span className="font-semibold">admin</span> /{" "}
-            <span className="font-semibold">password</span>
-          </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={onSubmit}>
@@ -92,9 +88,7 @@ export default function Login() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or
-            </span>
+            <span className="bg-background px-2 text-muted-foreground">Or</span>
           </div>
         </div>
 

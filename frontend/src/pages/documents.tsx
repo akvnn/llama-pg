@@ -134,7 +134,7 @@ export default function Documents() {
         </div>
       </div>
 
-      <DocumentsTable data={documents} loading={loading} />
+      <DocumentsTable data={documents} loading={loading} onRefresh={fetchDocuments} />
     </div>
   );
 }

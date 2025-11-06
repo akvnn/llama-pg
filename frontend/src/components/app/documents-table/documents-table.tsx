@@ -32,6 +32,7 @@ import {
   FileCheck2,
   FileCog,
   ArrowUpDown,
+  RefreshCw,
 } from "lucide-react";
 import {
   type ColumnDef,
@@ -174,7 +175,8 @@ const handleDelete = async (item: Document, onSuccess?: () => void) => {
 };
 
 const createColumns = (
-  onDeleteSuccess: (documentId: string) => void
+  onDeleteSuccess: (documentId: string) => void,
+  onRefresh?: () => void
 ): ColumnDef<Document>[] => [
   {
     id: "drag",
@@ -213,13 +215,27 @@ const createColumns = (
     accessorKey: "status",
     header: ({ column }) => {
       return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Status
-          <ArrowUpDown />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Status
+            <ArrowUpDown />
+          </Button>
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRefresh}
+              className="size-8"
+              title="Refresh status"
+            >
+              <RefreshCw className="size-4" />
+              <span className="sr-only">Refresh status</span>
+            </Button>
+          )}
+        </div>
       );
     },
     cell: ({ row }) => (
@@ -318,7 +334,8 @@ export const DocumentsTable: React.FC<{
   data: Document[];
   loading: boolean;
   limit?: number;
-}> = ({ data: externalData, loading, limit }) => {
+  onRefresh?: () => void;
+}> = ({ data: externalData, loading, limit, onRefresh }) => {
   const [data, setData] = React.useState<Document[]>(externalData);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -357,8 +374,8 @@ export const DocumentsTable: React.FC<{
   }, []);
 
   const columns = React.useMemo(
-    () => createColumns(handleDeleteSuccess),
-    [handleDeleteSuccess]
+    () => createColumns(handleDeleteSuccess, onRefresh),
+    [handleDeleteSuccess, onRefresh]
   );
 
   const table = useReactTable({

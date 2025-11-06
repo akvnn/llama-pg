@@ -2,7 +2,7 @@ import axios from "axios";
 import { getToken } from "./lib/auth";
 
 const axiosInstance = axios.create({
-  baseURL: window.VITE_API_URL,
+  baseURL: window.VITE_API_URL || "http://localhost:8000",
 });
 
 axiosInstance.interceptors.request.use(

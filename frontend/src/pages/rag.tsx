@@ -9,7 +9,6 @@ import { useProjectStore } from "@/hooks/use-project";
 import axiosInstance from "@/axios";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   Dialog,
   DialogContent,
@@ -24,9 +23,9 @@ import { Textarea } from "@/components/ui/textarea";
 export default function RAG() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [limit, setLimit] = useState(5);
+  const [limit, setLimit] = useState(3);
   const [systemPrompt, setSystemPrompt] = useState(
-    "You are a helpful AI assistant that answers questions based on the provided document context. Please provide accurate, concise responses and cite relevant information from the documents when possible. If the answer cannot be found in the provided context, please say so clearly."
+    "You are a helpful AI assistant that answers questions based on the provided document context. Please provide accurate, well-formatted responses using markdown syntax (headers, bold, italic, lists, code blocks, etc.). Cite relevant information from the documents when possible. If the answer cannot be found in the provided context, please say so clearly."
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -182,9 +181,7 @@ export default function RAG() {
               >
                 {message.role === "assistant" ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.content}
-                    </ReactMarkdown>
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
                 ) : (
                   <p className="text-sm">{message.content}</p>
