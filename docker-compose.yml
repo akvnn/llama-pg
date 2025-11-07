@@ -39,6 +39,8 @@ services:
       - ./init_psql.sql:/docker-entrypoint-initdb.d/init_psql.sql
     restart: always
     command: postgres -c  'timescaledb.telemetry_level=off'
+    logging:
+      driver: none
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

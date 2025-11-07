@@ -69,7 +69,18 @@ async def get_stats(
                 )
             projects = [project_id]
         else:
-            # TODO: check user has access to organization
+            user_has_access = await worker_client.check_user_access_to_organization(
+                organization_id=organization_id,
+                user_id=user_id,
+                roles_allowed=["member", "admin", "owner"],
+            )
+            if not user_has_access:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "message": "Organization does not exist or user does not have access."
+                    },
+                )
             all_projects = await worker_client.get_all_projects(
                 organization_id=organization_id
             )

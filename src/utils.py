@@ -28,7 +28,7 @@ async def create_org_schema(cur, org_id: str):
         CREATE TABLE "{org_id}".{TableNames.reserved_document_table_name} (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             project_id UUID NOT NULL REFERENCES "{org_id}".project(id) ON DELETE CASCADE,
-            parsed_document TEXT,
+            parsed_document BYTEA,
             document_uploaded_name TEXT,
             document_bytes BYTEA,
             metadata JSONB,

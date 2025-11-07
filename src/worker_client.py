@@ -14,6 +14,7 @@ if sys.platform == "win32":
 
 from loguru import logger
 import pickle
+import base64
 from src.database import db
 from src.constant import TableNames
 from src.models.document import DocumentDetail, DocumentInfo, DocumentStatus
@@ -202,7 +203,6 @@ class WorkerClient:
                     and "." in document.get("document_uploaded_name")
                     else "pdf"
                 )
-                # TODO: add check for document_uploaded_name to ensure it has a valid file extension
                 file_path = (
                     document.get("document_uploaded_name") or f"temp.{file_type}"
                 )
@@ -232,7 +232,7 @@ class WorkerClient:
         await db.connect()
         async with db.connection() as conn:
             async with conn.transaction():
-                async with conn.cursor() as cur:  # TODO:, check for id
+                async with conn.cursor() as cur:
                     for parsed_document, organization_id in zip(
                         parsed_documents, organizations_ids
                     ):
@@ -487,6 +487,16 @@ class WorkerClient:
                     )
                 else:
                     parsed_markdown_text = None
+                try:
+                    file_bytes_b64 = (
+                        base64.b64encode(document_bytes).decode("utf-8")
+                        if document_bytes
+                        else None
+                    )
+                except Exception as e:
+                    logger.error(f"Error encoding document bytes to base64: {e}")
+                    file_bytes_b64 = None
+
                 return DocumentDetail(
                     document_name=document_uploaded_name,
                     document_type=document_uploaded_name.split(".")[-1]
@@ -497,7 +507,7 @@ class WorkerClient:
                     document_id=id,
                     created_at=created_at,
                     parsed_markdown_text=parsed_markdown_text,
-                    file_bytes=document_bytes,  # will be converted to base64
+                    file_bytes=file_bytes_b64,  # base64-encoded
                     summary=summary if summary else "",
                     uploaded_by_user_name=uploaded_by_user_name,
                 )
@@ -511,7 +521,7 @@ class WorkerClient:
                 # Single query for all projects
                 await cur.execute(
                     f"""
-                    SELECT p.id, p.name, p.description, COUNT(d.id) as doc_count
+                    SELECT p.id, p.name, p.description, COUNT(d.id) as doc_count, p.created_at
                     FROM "{organization_id}".{TableNames.reserved_project_table_name} p 
                     LEFT JOIN "{organization_id}".{TableNames.reserved_document_table_name} d
                     ON p.id = d.project_id
@@ -530,11 +540,10 @@ class WorkerClient:
                         "project_name": row[1],
                         "number_of_documents": row[3],
                         "description": row[2] or "",
+                        "created_at": row[4],
                     }
                     for row in results
                 ]
-
-                logger.info(f"Projects info list: {projects_info_list}")
 
         return PaginationResponse(
             items=projects_info_list,
