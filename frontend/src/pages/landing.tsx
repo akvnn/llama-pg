@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import LlamaLogo from "@/assets/LlamaLogo";
+import GithubIcon from "@/components/app/layout/github-icon";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -73,8 +74,8 @@ export default function Landing() {
       title: "pgai Integration",
       description:
         "Leverages TimescaleDB's pgai extension for advanced vector operations and storage",
-      color: "text-accent",
-      bgColor: "bg-accent/10",
+      color: "text-chart-6",
+      bgColor: "bg-chart-6/10",
     },
   ];
 
@@ -95,14 +96,15 @@ export default function Landing() {
             <div className="h-16 w-16 rounded-lg flex items-center justify-center p-1.5">
               <LlamaLogo theme={theme} />
             </div>
-            <span className="font-bold text-xl">llama-pg</span>
+            <span className="font-bold text-xl">LlamaPG</span>
           </div>
           <div className="flex items-center gap-2">
+            <GithubIcon />
             <Button
               onClick={toggleTheme}
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="h-9 w-9 hover:cursor-pointer"
             >
               {theme === "dark" ? (
                 <Sun className="h-4 w-4" />
@@ -110,154 +112,160 @@ export default function Landing() {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            <Button onClick={() => navigate("/login")} variant="default">
+            <Button
+              onClick={() => navigate("/login")}
+              variant="default"
+              className="hover:cursor-pointer"
+            >
               Sign In
             </Button>
           </div>
         </div>
       </header>
 
-      <section className="container mx-auto px-4 py-20 md:py-32">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <Badge variant="outline" className="px-4 py-1">
-            Production-Ready RAG as a Service
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Transform Documents into
-            <br />
-            Intelligent Search
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            A powerful orchestrator built on pgai for intelligent document
-            parsing, vector embeddings generation, and retrieval-augmented
-            generation
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              onClick={() => navigate("/dashboard")}
-              className="gap-2"
-            >
-              Get Started
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() =>
-                window.open("https://github.com/akvnn/llama-pg", "_blank")
-              }
-              className="gap-2"
-            >
-              View Documentation
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Powerful Features
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Everything you need for production-ready document processing and
-            semantic search
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <Card
-                key={index}
-                className="border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
-              >
-                <CardHeader>
-                  <div
-                    className={`h-12 w-12 rounded-lg ${feature.bgColor} flex items-center justify-center mb-4`}
-                  >
-                    <Icon className={`h-6 w-6 ${feature.color}`} />
-                  </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-20 bg-muted/30 rounded-3xl">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Seamless Processing Pipeline
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            From PDF upload to searchable embeddings in a fully automated
-            workflow
-          </p>
-        </div>
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {pipeline.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div key={index} className="flex flex-col items-center">
-                  <div className="relative">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
-                      <Icon className="h-7 w-7 text-primary" />
-                    </div>
-                    {index < pipeline.length - 1 && (
-                      <div className="hidden lg:block absolute top-1/2 left-full w-full h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
-                    )}
-                  </div>
-                  <div className="mt-4 text-center">
-                    <div className="text-xs font-semibold text-primary mb-1">
-                      {item.step}
-                    </div>
-                    <div className="text-sm font-medium">{item.label}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-20">
-        <Card className="border-2 bg-gradient-to-br from-primary/5 to-accent/5">
-          <CardHeader className="text-center py-16">
-            <CardTitle className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Get Started?
-            </CardTitle>
-            <CardDescription className="text-lg mb-8 max-w-2xl mx-auto">
-              Start processing documents and building intelligent search
-              experiences today
-            </CardDescription>
+      <div className="max-w-7xl mx-auto">
+        <section className="container mx-auto px-4 py-20 md:py-32">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <Badge variant="outline" className="px-4 py-1">
+              Production-Ready RAG as a Service
+            </Badge>
+            <h1 className="text-4xl md:text-6xl py-4 font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Transform Documents into
+              <br />
+              Intelligent Search
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              A powerful orchestrator built for intelligent document parsing,
+              vector embeddings generation, and retrieval-augmented generation.
+              Automate embeddings for all your projects in open place
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
                 onClick={() => navigate("/dashboard")}
-                className="gap-2"
+                className="gap-2 hover:cursor-pointer"
               >
-                Launch Dashboard
+                Get Started
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => navigate("/login")}
+                onClick={() =>
+                  window.open("https://github.com/akvnn/llama-pg", "_blank")
+                }
+                className="gap-2 hover:cursor-pointer"
               >
-                Sign In
+                View Documentation
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
-          </CardHeader>
-        </Card>
-      </section>
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Powerful Features
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Everything you need for production-ready document processing and
+              semantic search
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <Card
+                  key={index}
+                  className="border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                >
+                  <CardHeader>
+                    <div
+                      className={`h-12 w-12 rounded-lg ${feature.bgColor} flex items-center justify-center mb-4`}
+                    >
+                      <Icon className={`h-6 w-6 ${feature.color}`} />
+                    </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                    <CardDescription className="text-base leading-relaxed">
+                      {feature.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-20 bg-muted/30 rounded-3xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Seamless Processing Pipeline
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              From PDF upload to searchable embeddings in a fully automated
+              workflow
+            </p>
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {pipeline.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <div key={index} className="flex flex-col items-center">
+                    <div className="relative">
+                      <div className="h-16 w-16 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
+                        <Icon className="h-7 w-7 text-primary" />
+                      </div>
+                      {index < pipeline.length - 1 && (
+                        <div className="hidden lg:block absolute top-1/2 left-full w-full h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      <div className="text-xs font-semibold text-primary mb-1">
+                        {item.step}
+                      </div>
+                      <div className="text-sm font-medium">{item.label}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-20">
+          <Card className="border-2 bg-gradient-to-br from-primary/5 to-accent/5">
+            <CardHeader className="text-center py-16">
+              <CardTitle className="text-3xl md:text-4xl font-bold mb-4">
+                Ready to Get Started?
+              </CardTitle>
+              <CardDescription className="text-lg mb-8 max-w-2xl mx-auto">
+                Start processing documents and building intelligent search
+                experiences today
+              </CardDescription>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/dashboard")}
+                  className="gap-2"
+                >
+                  Launch Dashboard
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/login")}
+                >
+                  Sign In
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }

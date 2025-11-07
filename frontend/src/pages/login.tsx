@@ -39,7 +39,7 @@ export default function Login() {
           </h2>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={onSubmit}>
+        <form className="space-y-6" onSubmit={onSubmit}>
           <div className="space-y-4">
             <div>
               <Label htmlFor="username">Username</Label>

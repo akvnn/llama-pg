@@ -1,17 +1,17 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return "Invalid date"
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Invalid date";
 
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString("en-UK", {
     day: "numeric",
-    month: "long",
+    month: "numeric",
     year: "numeric",
-  })
+  });
 }

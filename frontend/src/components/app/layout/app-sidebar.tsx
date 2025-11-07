@@ -57,7 +57,7 @@ const data = {
       icon: Search,
     },
     {
-      title: "RAG",
+      title: "Chat",
       url: "/rag",
       icon: MessageSquare,
     },
@@ -81,7 +81,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="h-8 w-8">
                   <LlamaLogo theme={theme} />
                 </div>
-                <span className="text-base font-semibold">Llama-pg</span>
+                <span className="text-base font-semibold">LlamaPG</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -121,19 +121,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <SidebarMenuSubButton
                           asChild
                           isActive={location.pathname === "/user"}
+                          className="cursor-pointer"
                         >
                           <Link to="/user">
                             <UserPlus />
-                            <span>Create User</span>
+                            <span>Users</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={location.pathname === "/user-org"}
+                          isActive={location.pathname === "/organization"}
+                          className="cursor-pointer"
                         >
-                          <Link to="/user-org">
+                          <Link to="/organization">
                             <Building2 />
                             <span>Organization</span>
                           </Link>
@@ -145,6 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             logout();
                             window.location.reload();
                           }}
+                          className="cursor-pointer"
                         >
                           <Power />
                           <span>Logout</span>

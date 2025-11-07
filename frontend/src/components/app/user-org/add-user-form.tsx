@@ -16,28 +16,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserPlus } from "lucide-react";
-import type { User } from "@/types/user.types";
+import { Input } from "@/components/ui/input";
 
 interface AddUserFormProps {
-  availableUsers: User[];
   onAddUser: (username: string, role: "admin" | "member") => Promise<void>;
   loading: boolean;
 }
 
-export function AddUserForm({
-  availableUsers,
-  onAddUser,
-  loading,
-}: AddUserFormProps) {
-  const [selectedUsername, setSelectedUsername] = useState("");
+export function AddUserForm({ onAddUser, loading }: AddUserFormProps) {
+  const [username, setUsername] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUsername) return;
+    if (!username) return;
 
-    await onAddUser(selectedUsername, role);
-    setSelectedUsername("");
+    await onAddUser(username, role);
+    setUsername("");
     setRole("member");
   };
 
@@ -55,29 +50,16 @@ export function AddUserForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="username">Select User</Label>
-            <Select
-              value={selectedUsername}
-              onValueChange={(value) => setSelectedUsername(value)}
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              className="mt-1"
               disabled={loading}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select a user" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUsers.length === 0 ? (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No users available
-                  </div>
-                ) : (
-                  availableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.username}>
-                      {user.username}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div>
@@ -100,7 +82,7 @@ export function AddUserForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={loading || availableUsers.length === 0}
+            disabled={loading || username.length === 0}
           >
             {loading ? "Adding..." : "Add User"}
           </Button>

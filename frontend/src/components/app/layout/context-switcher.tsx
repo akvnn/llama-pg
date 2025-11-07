@@ -145,6 +145,7 @@ export function ContextSwitcher() {
 
       setIsCreateOrgDialogOpen(false);
       setOrganizationName("");
+      setIsCreateProjectDialogOpen(true);
 
       const response = await axiosInstance.get<Organization[]>(
         "/organizations"

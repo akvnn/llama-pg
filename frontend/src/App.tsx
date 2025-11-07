@@ -26,7 +26,7 @@ function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/search" element={<Search />} />
             <Route path="/rag" element={<RAG />} />
-            <Route path="/user-org" element={<UserOrg />} />
+            <Route path="/organization" element={<UserOrg />} />
             <Route path="/user" element={<User />} />
           </Route>
         </Routes>

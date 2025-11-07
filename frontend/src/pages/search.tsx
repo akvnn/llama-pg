@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useOrganizationStore } from "@/hooks/use-organization";
 import { useProjectStore } from "@/hooks/use-project";
@@ -12,7 +18,7 @@ import type { SearchResult } from "@/types/search.types";
 
 export default function Search() {
   const [query, setQuery] = useState("");
-  const [limit, setLimit] = useState(5);
+  const [limit, setLimit] = useState(3);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

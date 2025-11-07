@@ -1,6 +1,7 @@
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLocation } from "react-router-dom";
+import GithubIcon from "@/components/app/layout/github-icon";
 
 export function SiteHeader() {
   const location = useLocation();
@@ -14,6 +15,9 @@ export function SiteHeader() {
           className="mx-2 data-[orientation=vertical]:h-4"
         />
         <h1 className="text-base font-medium capitalize">{route}</h1>
+        <div className="ml-auto">
+          <GithubIcon />
+        </div>
       </div>
     </header>
   );

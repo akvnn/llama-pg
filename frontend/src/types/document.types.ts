@@ -5,7 +5,7 @@ export const documentSchema = z.object({
   document_uploaded_name: z.string(),
   metadata: z.record(z.unknown()),
   status: z.string(),
-  uploaded_by_user_id: z.string(),
+  uploaded_by_user_name: z.string(),
   created_at: z.string(),
   project_id: z.string(),
   project_name: z.string(),

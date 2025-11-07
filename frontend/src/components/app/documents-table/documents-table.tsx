@@ -85,6 +85,7 @@ import {
   type Document,
   type DocumentDetail,
 } from "@/types/document.types";
+import { formatDate } from "@/lib/utils";
 
 export const schema = documentSchema;
 // Create a separate component for the drag handle
@@ -252,7 +253,7 @@ const createColumns = (
     header: () => "Uploaded At",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {new Date(row.original.created_at).toLocaleDateString()}
+        {formatDate(row.original.created_at)}
       </span>
     ),
     enableGlobalFilter: false,
@@ -262,7 +263,7 @@ const createColumns = (
     header: () => "Uploaded By",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.uploaded_by_user_id || "No uploader"}
+        {row.original.uploaded_by_user_name || "No uploader"}
       </span>
     ),
     enableGlobalFilter: false,
