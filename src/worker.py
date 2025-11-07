@@ -9,7 +9,7 @@ class WorkerSettings:
     cron_jobs = [
         cron(
             "src.worker_runner.parser_runner",
-            minute={m for m in range(0, 60, 5)},
+            minute={m for m in range(0, 60, 1)},
             run_at_startup=True,
             max_tries=2,
             timeout=600,

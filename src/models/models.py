@@ -18,5 +18,5 @@ class RAGRequest(BaseModel):
     query: str
     system_prompt: str
     limit: Annotated[
-        int, Field(default=5, ge=1, description="Number of results to return")
+        int, Field(default=3, ge=1, description="Number of results to return")
     ]

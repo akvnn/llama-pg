@@ -12,8 +12,6 @@ services:
       NODE_ENV: development
       VITE_API_URL: http://localhost:8000
       VITE_JWT_EXPIRES_IN: 1296000
-    stdin_open: true
-    tty: true
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -33,7 +31,7 @@ services:
     image: timescale/timescaledb-ha:pg17
     container_name: timescaledb
     ports:
-      - 5437:5432
+      - 5432:5432
     environment:
       - POSTGRES_PASSWORD=password
     volumes:
