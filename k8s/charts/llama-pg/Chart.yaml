@@ -2,14 +2,14 @@ apiVersion: v2
 name: llama-pg
 description: A Helm chart for llama-pg RaaS orchestrator
 type: application
-version: 0.1.0
-appVersion: "1.16.0"
+version: 0.1.3
+appVersion: "0.1.3"
 dependencies:
   - name: api
-    version: "0.1.0"
+    version: "0.1.3"
     repository: file://charts/api
   - name: worker
-    version: "0.1.0"
+    version: "0.1.3"
     repository: file://charts/worker
     condition: worker.enabled
   - name: redis-ha
