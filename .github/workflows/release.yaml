@@ -125,7 +125,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           commit-message: "chore: bump helm charts to version ${{ needs.build-and-push.outputs.version }}"
           title: "chore: bump helm charts to version ${{ needs.build-and-push.outputs.version }}"
           body: |
@@ -194,6 +194,12 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: v3.12.0
+          
+      - name: Add Helm repositories
+        run: |
+          helm repo add dandydeveloper https://dandydeveloper.github.io/charts
+          helm repo add akvnntimescale https://akvnn.github.io/helm-timescaledb
+          helm repo update
 
       - name: Update Helm dependencies
         run: |
