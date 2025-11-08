@@ -12,6 +12,7 @@ A production-ready multi-tenant RAG as a Service (RaaS) orchestrator for intelli
 - **REST API**: a FastAPI built to support a multi-tenant and multi-project setup
 - **Worker Architecture**: Scalable background processing with ARQ workers
 - **pgai Integration**: Leverages TimescaleDB's [pgai](https://github.com/timescale/pgai) extension for vector operations
+- **Easy Installation**: via Helm or Docker
 
 ### Pipeline: Document → Embeddings
 
@@ -115,6 +116,25 @@ REDIS_ARQ_MAX_JOBS=10
 ```
 
 ### 3. Run the stack
+
+**Using Helm (recommended):**
+
+```bash
+helm repo add akvnn https://akvnn.github.io/wordpress-helm
+
+helm repo update
+
+helm install llama-pg akvnn/llama-pg \
+--set configMapEnv.VITE_API_URL=http://chart-example.local/api \
+--set api.secretEnv.OPENAI_API_KEY=openai-api-key \
+--set api.secretEnv.LLAMA_CLOUD_API_KEY=llama-cloud-api-key \
+--set worker.secretEnv.OPENAI_API_KEY=openai-api-key \
+--set worker.secretEnv.LLAMA_CLOUD_API_KEY=llama-cloud-api-key
+```
+
+Make sure to modify the `values.yaml` if needed, or override them via the `helm install` command as shown above.
+
+Note: the helm chart comes pre-packaged with TimescaleDB and redis dependencies, if you would like to use an external DB and/or redis, you can disable them in `values.yaml`.
 
 **Using Docker:**
 

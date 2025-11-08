@@ -50,6 +50,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Prune between builds
+        run: docker system prune -f
+        
       - name: Build and push API
         uses: docker/build-push-action@v5
         with:
