@@ -2,6 +2,8 @@
 
 A production-ready multi-tenant RAG as a Service (RaaS) orchestrator for intelligent document parsing, vector embeddings generation, and retrieval-augmented generation—enabling you to automate embeddings across all your projects in one place
 
+![Interface](frontend/public/interface.png)
+
 ## 🚀 Features
 
 - **PDF Processing**: Automatic PDF parsing using [LlamaParse]((https://cloud.llamaindex.ai/)) (or any supported parser)
