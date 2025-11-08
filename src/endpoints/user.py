@@ -200,7 +200,6 @@ async def create_organization(
                             status_code=500,
                             detail="Error associating user with organization",
                         )
-                    # user_org_id = str(user_org_result[0])
 
                     # Create schema and tables for the new organization
                     await create_org_schema(cur, org_id)
@@ -489,8 +488,9 @@ async def add_user_to_organization(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error adding user to organization: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to add user to organization: {str(e)}"
+            status_code=500, detail="Error adding user to organization."
         )
 
 
@@ -583,6 +583,7 @@ async def kick_user_from_organization(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error kicking user from organization: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to kick user from organization: {str(e)}"
+            status_code=500, detail="Error kicking user from organization."
         )

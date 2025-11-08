@@ -24,11 +24,15 @@ RUN rm -rf ./*
 # Copy built assets from builder stage
 COPY --from=builder /app/dist .
 
+# Install dos2unix using apk (Alpine's package manager)
+RUN apk add --no-cache dos2unix
+
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
+RUN dos2unix /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose port

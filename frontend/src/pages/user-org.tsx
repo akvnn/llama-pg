@@ -155,7 +155,7 @@ export default function UserOrg() {
         </div>
         <div>
           <Button onClick={() => navigate("/user")} className="btn">
-            Organize Users
+            Manage Users
           </Button>
         </div>
       </div>

@@ -64,7 +64,7 @@ async def get_stats(
                 return JSONResponse(
                     status_code=404,
                     content={
-                        "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                        "message": "Project does not exist or user does not have access."
                     },
                 )
             projects = [project_id]

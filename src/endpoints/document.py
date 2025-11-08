@@ -202,7 +202,7 @@ async def get_document(
             return JSONResponse(
                 status_code=404,
                 content={
-                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    "message": "Project does not exist or user does not have access."
                 },
             )
         resp = await worker_client.get_document_by_id(

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
-from src.models.models import ProjectRequest
+from src.models.project import ProjectRequest
 from src.models.pagination import (
     PaginationParams,
     PaginationResponse,
@@ -51,7 +51,7 @@ async def create_project(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error creating project '{project_name}': {str(e)}")
+        logger.error(f"Error creating project: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Error creating project",
@@ -116,7 +116,7 @@ async def get_projects_info(
                 return JSONResponse(
                     status_code=404,
                     content={
-                        "message": f"Project does not exist or user does not have access."
+                        "message": "Project does not exist or user does not have access."
                     },
                 )
             projects = [project_id]

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from src.auth import get_current_user_id
 from src.depedency import get_pgai_client, get_worker_client
-from src.models.models import RAGRequest
+from src.models.retreival import RAGRequest
 from src.pgai_client import PGAIClient
 from src.worker_client import WorkerClient
 
@@ -33,7 +33,7 @@ async def find_relevant_chunks(
             return JSONResponse(
                 status_code=404,
                 content={
-                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    "message": "Project does not exist or user does not have access."
                 },
             )
         results = await pgai_client.find_relevant_chunks(
@@ -94,7 +94,7 @@ async def rag(
             return JSONResponse(
                 status_code=404,
                 content={
-                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    "message": "Project does not exist or user does not have access."
                 },
             )
         result = await pgai_client.rag_query(

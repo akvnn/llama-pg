@@ -2,6 +2,12 @@ import datetime
 from pydantic import BaseModel
 
 
+class ProjectRequest(BaseModel):
+    organization_id: str
+    project_name: str
+    project_description: str
+
+
 class ProjectInfo(BaseModel):
     project_id: str
     project_name: str

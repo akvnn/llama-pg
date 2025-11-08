@@ -135,9 +135,7 @@ export default function Landing() {
               Intelligent Search
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              A powerful orchestrator built for intelligent document parsing,
-              vector embeddings generation, and retrieval-augmented generation.
-              Automate embeddings for all your projects in open place
+              A powerful orchestrator for intelligent document parsing, vector embedding generation, and retrieval-augmented generation—enabling you to automate embeddings across all your projects in one place
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
