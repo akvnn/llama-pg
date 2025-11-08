@@ -5,6 +5,7 @@ import asyncio
 from fastapi import HTTPException
 
 from src.models.pagination import PaginationResponse
+from src.models.project import ProjectInfo
 from src.models.system import StatInfo, SystemResponse
 
 # Set Windows-compatible event loop policy
@@ -13,6 +14,7 @@ if sys.platform == "win32":
 
 from loguru import logger
 import pickle
+import base64
 from src.database import db
 from src.constant import TableNames
 from src.models.document import DocumentDetail, DocumentInfo, DocumentStatus
@@ -164,7 +166,8 @@ class WorkerClient:
                     await cur.execute(
                         f"""
                         SELECT * FROM "{schemaname}".{TableNames.reserved_document_table_name} 
-                        WHERE status = %s OR status = %s;
+                        WHERE (status = %s OR status = %s)
+                        AND deleted_at IS NULL
                         """,
                         (
                             DocumentStatus.PENDING.value,
@@ -200,10 +203,13 @@ class WorkerClient:
                     and "." in document.get("document_uploaded_name")
                     else "pdf"
                 )
-                file_path = f"temp.{file_type}"
+                file_path = (
+                    document.get("document_uploaded_name") or f"temp.{file_type}"
+                )
                 with open(file_path, "wb") as f:
                     f.write(document.get("document_bytes"))
                 metadata = dict(document.get("metadata", {}))
+                metadata["id"] = str(document.get("id"))
                 parsed_document = await self.parser_client.aprocess_document(
                     file_path, extra_info=metadata
                 )
@@ -226,7 +232,7 @@ class WorkerClient:
         await db.connect()
         async with db.connection() as conn:
             async with conn.transaction():
-                async with conn.cursor() as cur:  # TODO:, check for id
+                async with conn.cursor() as cur:
                     for parsed_document, organization_id in zip(
                         parsed_documents, organizations_ids
                     ):
@@ -236,64 +242,103 @@ class WorkerClient:
                                     "Empty list passed as parsed_document. Skipping document."
                                 )
                                 continue
-                            # Get doc_id from the parsed_document's metadata (if it's a Document object)
                             if isinstance(parsed_document, list):
                                 parsed_document = parsed_document[0]
-                            if hasattr(parsed_document, "metadata"):
-                                doc_id = parsed_document.metadata.get("id", "")
-                            else:
-                                doc_id = parsed_document.get("metadata", {}).get(
-                                    "id", ""
-                                )
+                            metadata = (
+                                getattr(parsed_document, "metadata", {})
+                                if hasattr(parsed_document, "metadata")
+                                else parsed_document.get("metadata", {})
+                            )
+                            doc_id = metadata.get("id", None)
                             if not doc_id or doc_id == "":
-                                logger.warning(
+                                logger.error(
                                     "Document ID not found in parsed_document metadata. Skipping document."
                                 )
                                 continue
                             await cur.execute(
                                 f"""
                                 UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
-                                SET processed = {DocumentStatus.QUEUED_EMBEDDING.value}, parsed_document = %s
-                                WHERE id = %s;
+                                SET status = %s, parsed_document = %s
+                                WHERE id = %s
+                                RETURNING project_id;
                             """,
                                 (
+                                    DocumentStatus.QUEUED_EMBEDDING.value,
                                     pickle.dumps(parsed_document),
                                     doc_id,
                                 ),
                             )
-                            pgai_table_name = TableNames.reserved_pgai_table_name
+                            project_id = await cur.fetchone()
+                            if not project_id:
+                                logger.error(
+                                    f"Failed to update document with ID {doc_id} in organization {organization_id}"
+                                )
+                                continue
                             await cur.execute(
                                 f"""
-                                INSERT INTO "{organization_id}".{pgai_table_name} 
-                                (text, title, url)
-                                VALUES (%s, %s, %s);
+                                INSERT INTO "{organization_id}".{TableNames.reserved_pgai_table_name} 
+                                (text, title, metadata, project_id)
+                                VALUES (%s, %s, %s, %s);
                                 """,
                                 (
-                                    getattr(parsed_document, "text", None)
+                                    getattr(parsed_document, "text", "")
                                     if hasattr(parsed_document, "text")
-                                    else parsed_document.get("text", None),
-                                    getattr(parsed_document, "metadata", {}).get(
-                                        "title", None
-                                    )
-                                    if hasattr(parsed_document, "metadata")
-                                    else parsed_document.get("metadata", {}).get(
-                                        "title", None
-                                    ),
-                                    getattr(parsed_document, "metadata", {}).get(
-                                        "url", None
-                                    )
-                                    if hasattr(parsed_document, "metadata")
-                                    else parsed_document.get("metadata", {}).get(
-                                        "url", None
-                                    ),
+                                    else parsed_document.get("text", ""),
+                                    metadata.get("title", ""),
+                                    json.dumps(metadata),
+                                    project_id[0]
+                                    if project_id and len(project_id) > 0
+                                    else None,
                                 ),
                             )
                         except Exception as e:
                             logger.error(f"Error uploading parsed document: {e}")
-                            return
+                            raise
         logger.info(
             f"Uploaded {len(parsed_documents)} parsed documents to the database"
         )
+
+    async def soft_delete_document(
+        self, organization_id: str, user_id: str, document_id: str
+    ) -> bool:
+        try:
+            await db.connect()
+            async with db.connection() as conn:
+                async with conn.transaction():
+                    async with conn.cursor() as cur:
+                        await cur.execute(
+                            f"""
+                                UPDATE "{organization_id}".{TableNames.reserved_document_table_name}
+                                SET deleted_at = NOW(), deleted_by_user_id = %s
+                                WHERE id = %s
+                                AND deleted_at IS NULL
+                                """,
+                            (
+                                user_id,
+                                document_id,
+                            ),
+                        )
+                        if cur.rowcount != 1:
+                            logger.warning(
+                                f"Document '{document_id}' to be deleted was not found or is already deleted"
+                            )
+                            raise Exception(
+                                "Document to be deleted was not found or is already deleted"
+                            )
+                        await cur.execute(
+                            f"""
+                                UPDATE "{organization_id}".{TableNames.reserved_pgai_table_name}
+                                SET deleted_at = NOW()
+                                WHERE (metadata->>'id') = %s
+                                AND deleted_at IS NULL
+                                """,
+                            (document_id,),
+                        )
+                        return True  # might still not be in pgai table, so always return True
+
+        except Exception as e:
+            logger.error(f"Error deleting document: {e}")
+            raise
 
     async def get_all_projects(self, organization_id: str):
         await db.connect()
@@ -306,11 +351,37 @@ class WorkerClient:
                 )
                 projects = await cur.fetchall()
                 return [str(project[0]) for project in projects]
-                # column_names = [desc[0] for desc in cur.description]
-                # projects_list = [
-                #     dict(zip(column_names, project)) for project in projects
-                # ]
-                # return projects_list
+
+    async def get_all_projects_details(
+        self, organization_id: str
+    ) -> PaginationResponse:
+        await db.connect()
+        async with db.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f"""
+                        SELECT p.id::text as project_id, 
+                        p.name as project_name, 
+                        COUNT(d.id) as number_of_documents,
+                        p.created_at, 
+                        p.updated_at, 
+                        p.description, 
+                        p.created_by_user_id::text
+                        FROM "{organization_id}".{TableNames.reserved_project_table_name} p 
+                        LEFT JOIN "{organization_id}".{TableNames.reserved_document_table_name} d
+                        ON p.id = d.project_id
+                        WHERE d.deleted_at IS NULL
+                        GROUP BY p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at
+                        ORDER BY p.name;
+                        """,
+                )
+                projects = await cur.fetchall()
+                column_names = [desc[0] for desc in cur.description]
+                projects_info = [
+                    ProjectInfo(**dict(zip(column_names, project)))
+                    for project in projects
+                ]
+                return PaginationResponse(items=projects_info)
 
     async def get_recent_documents_info(
         self, organization_id: str, projects: list, skip: int, limit: int
@@ -322,17 +393,26 @@ class WorkerClient:
                     f"""
                     SELECT COUNT(*) FROM "{organization_id}".{TableNames.reserved_document_table_name} as d
                     WHERE d.project_id = ANY(%s)
+                    AND d.deleted_at IS NULL
                 """,
                     (projects,),
                 )
                 total_count = (await cur.fetchone())[0]
                 await cur.execute(
                     f"""
-                    SELECT d.document_uploaded_name, d.metadata, d.status, d.uploaded_by_user_id, d.created_at, p.name as project_name
+                    SELECT d.id as document_id,
+                    d.document_uploaded_name, 
+                    d.metadata, 
+                    d.status, 
+                    (SELECT username FROM users u WHERE u.id = d.uploaded_by_user_id) as uploaded_by_user_name, 
+                    d.created_at, 
+                    d.project_id, 
+                    p.name as project_name
                     FROM "{organization_id}".{TableNames.reserved_document_table_name} d
                     JOIN "{organization_id}".{TableNames.reserved_project_table_name} p
                     ON d.project_id = p.id
                     WHERE d.project_id = ANY(%s)
+                    AND d.deleted_at IS NULL
                     ORDER BY d.created_at DESC
                     LIMIT %s OFFSET %s
                 """,
@@ -341,7 +421,10 @@ class WorkerClient:
                 documents = await cur.fetchall()
                 column_names = [desc[0] for desc in cur.description]
                 documents_info = [
-                    DocumentInfo(**dict(zip(column_names, doc))) for doc in documents
+                    DocumentInfo(
+                        **dict(zip(column_names, doc), organization_id=organization_id)
+                    )
+                    for doc in documents
                 ]
 
                 total_pages = (total_count + limit - 1) // limit  # Ceiling division
@@ -367,9 +450,18 @@ class WorkerClient:
             async with conn.cursor() as cur:
                 await cur.execute(
                     f"""
-                            SELECT id, parsed_document, document_uploaded_name, document_bytes, metadata, status, summary, created_at, uploaded_by_user_id FROM "{organization_id}".{TableNames.reserved_document_table_name}
-                            WHERE id = %s;
-                            """,
+                        SELECT d.id, d.parsed_document, 
+                        d.document_uploaded_name, 
+                        d.document_bytes, 
+                        d.metadata, 
+                        d.status, 
+                        d.summary, 
+                        d.created_at, 
+                        (SELECT username FROM users u WHERE u.id = d.uploaded_by_user_id) as uploaded_by_user_name 
+                        FROM "{organization_id}".{TableNames.reserved_document_table_name} d
+                        WHERE d.id = %s
+                        AND d.deleted_at IS NULL;
+                        """,
                     (document_id,),
                 )
                 document = await cur.fetchone()
@@ -384,7 +476,7 @@ class WorkerClient:
                     status,
                     summary,
                     created_at,
-                    uploaded_by_user_id,
+                    uploaded_by_user_name,
                 ) = document
                 if parsed_document:
                     parsed_document = pickle.loads(parsed_document)
@@ -395,6 +487,16 @@ class WorkerClient:
                     )
                 else:
                     parsed_markdown_text = None
+                try:
+                    file_bytes_b64 = (
+                        base64.b64encode(document_bytes).decode("utf-8")
+                        if document_bytes
+                        else None
+                    )
+                except Exception as e:
+                    logger.error(f"Error encoding document bytes to base64: {e}")
+                    file_bytes_b64 = None
+
                 return DocumentDetail(
                     document_name=document_uploaded_name,
                     document_type=document_uploaded_name.split(".")[-1]
@@ -405,9 +507,9 @@ class WorkerClient:
                     document_id=id,
                     created_at=created_at,
                     parsed_markdown_text=parsed_markdown_text,
-                    file_bytes=document_bytes,  # will be converted to base64
+                    file_bytes=file_bytes_b64,  # base64-encoded
                     summary=summary if summary else "",
-                    uploaded_by_user_id=uploaded_by_user_id,
+                    uploaded_by_user_name=uploaded_by_user_name,
                 )
 
     async def get_projects_info(
@@ -419,11 +521,12 @@ class WorkerClient:
                 # Single query for all projects
                 await cur.execute(
                     f"""
-                    SELECT p.id, p.name, p.description, COUNT(d.id) as doc_count
+                    SELECT p.id, p.name, p.description, COUNT(d.id) as doc_count, p.created_at
                     FROM "{organization_id}".{TableNames.reserved_project_table_name} p 
                     LEFT JOIN "{organization_id}".{TableNames.reserved_document_table_name} d
                     ON p.id = d.project_id
                     WHERE p.id = ANY(%s)
+                    AND d.deleted_at IS NULL
                     GROUP BY p.id, p.name, p.description
                     ORDER BY p.name;
                     """,
@@ -433,9 +536,11 @@ class WorkerClient:
 
                 projects_info_list = [
                     {
+                        "project_id": str(row[0]),
                         "project_name": row[1],
                         "number_of_documents": row[3],
                         "description": row[2] or "",
+                        "created_at": row[4],
                     }
                     for row in results
                 ]
@@ -456,8 +561,9 @@ class WorkerClient:
             async with conn.cursor() as cur:
                 await cur.execute(
                     f"""
-                            SELECT status, COUNT(status) FROM "{organization_id}".document
+                            SELECT status, COUNT(status) FROM "{organization_id}".{TableNames.reserved_document_table_name}
                             WHERE project_id = ANY(%s)
+                            AND deleted_at IS NULL
                             GROUP BY status
                             """,
                     (projects,),

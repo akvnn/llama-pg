@@ -7,6 +7,7 @@ from uuid import UUID
 class UserRequest(BaseModel):
     username: str
     password: str
+    is_service_account: bool = False
 
     @field_validator("password")
     @classmethod
@@ -18,7 +19,7 @@ class UserRequest(BaseModel):
 
 class UserResponse(BaseModel):
     token: str
-    user_org_ids: list[UUID]
+    org_ids: list[UUID]
 
 
 class CreateOrganizationRequest(BaseModel):

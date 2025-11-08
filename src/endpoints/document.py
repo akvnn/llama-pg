@@ -12,6 +12,7 @@ from src.models.pagination import (
     get_pagination_params,
 )
 from src.worker_client import WorkerClient
+import json
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ async def upload_document(
     organization_id: str = Form(..., description="Organization id"),
     project_id: str = Form(..., description="Project id"),
     document_name: Annotated[str | None, Form(description="Document title")] = None,
-    metadata: Annotated[dict | None, Form(description="Additional metadata")] = None,
+    metadata: Annotated[str | None, Form(description="Additional metadata")] = None,
     worker_client: WorkerClient = Depends(get_worker_client),
 ):
     try:
@@ -38,18 +39,18 @@ async def upload_document(
             return JSONResponse(
                 status_code=404,
                 content={
-                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    "message": "Project does not exist or user does not have access."
                 },
             )
         document_bytes = await document.read()
         document_uploaded_name = document_name or getattr(
             document, "filename", "uploaded_document"
         )
-        document_metadata = metadata or getattr(document, "metadata", {})
+        document_metadata = json.loads(metadata) if metadata else {}
 
         insert_object = {
             "document_uploaded_name": document_uploaded_name,
-            "metadata": metadata or document_metadata,
+            "metadata": document_metadata,
             "document_bytes": document_bytes,
         }
 
@@ -71,6 +72,50 @@ async def upload_document(
         return JSONResponse(
             status_code=500,
             content={"message": "Error uploading document to project"},
+        )
+
+
+@router.delete("/delete_document")
+async def delete_document(
+    user_id: str = Depends(get_current_user_id),
+    params: DocumentParamsRequest = Depends(),
+    worker_client: WorkerClient = Depends(get_worker_client),
+):
+    try:
+        document_id = str(params.document_id)
+        project_id = params.project_id
+        organization_id = params.organization_id
+        # Validate if the user has access to the organization and project
+        project_exists = await worker_client.check_user_access_to_project(
+            organization_id=organization_id,
+            project_id=project_id,
+            user_id=user_id,
+            roles_allowed=["admin", "owner"],
+        )
+        if not project_exists:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": "Project does not exist or user does not have access."
+                },
+            )
+        is_success = await worker_client.soft_delete_document(
+            organization_id=organization_id,
+            user_id=user_id,
+            document_id=document_id,
+        )
+        if is_success:
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Document deleted successfully"},
+            )
+        else:
+            raise Exception("Something went wrong")
+    except Exception as e:
+        logger.error(f"Error deleting document: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Error deleting document from project"},
         )
 
 
@@ -98,12 +143,23 @@ async def get_recent_documents_info(
                 return JSONResponse(
                     status_code=404,
                     content={
-                        "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                        "message": "Project does not exist or user does not have access."
                     },
                 )
             projects = [project_id]
         else:
-            # TODO: check user has access to organization
+            user_has_access = await worker_client.check_user_access_to_organization(
+                organization_id=organization_id,
+                user_id=user_id,
+                roles_allowed=["member", "admin", "owner"],
+            )
+            if not user_has_access:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "message": "Organization does not exist or user does not have access."
+                    },
+                )
             all_projects = await worker_client.get_all_projects(
                 organization_id=organization_id
             )  # No pagination for projects, either one or all. PaginationParams are for the documents below.
@@ -146,7 +202,7 @@ async def get_document(
             return JSONResponse(
                 status_code=404,
                 content={
-                    "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                    "message": "Project does not exist or user does not have access."
                 },
             )
         resp = await worker_client.get_document_by_id(

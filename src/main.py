@@ -7,8 +7,8 @@ from src.endpoints.document import router as document_router
 from src.endpoints.project import router as project_router
 from src.endpoints.retreival import router as retreival_router
 from src.endpoints.system import router as system_router
-from src.endpoints.user import router as user_router
-from src.configuration import config
+from src.endpoints.user import router as user_router, signup
+from src.models.user import UserRequest
 import psycopg
 from psycopg_pool import AsyncConnectionPool
 from pgvector.psycopg import register_vector_async
@@ -24,27 +24,79 @@ async def setup_pgvector_psycopg(conn: psycopg.AsyncConnection):
     await register_vector_async(conn)
 
 
+async def ensure_pgai_installed(pool: AsyncConnectionPool, settings: Settings) -> None:
+    """Install pgai only if not already present"""
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'ai';"
+                )
+                result = await cur.fetchone()
+                exists = result[0] if result else False
+                if not exists:
+                    logger.info("Installing pgai...")
+                    pgai.install(
+                        settings.DB_URL
+                    )  # install the necessary catalog tables and functions into the ai schema of the database.
+                else:
+                    logger.info("pgai already installed, skipping")
+    except Exception as e:
+        logger.error(f"Error installing pgai: {str(e)}")
+
+
+async def create_default_admin(
+    pool: AsyncConnectionPool, username: str, password: str
+) -> None:
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT id FROM users WHERE username = %s;",
+                    (username,),
+                )
+                if await cur.fetchone():
+                    logger.info("Admin user already exists")
+                    return
+
+        await signup(
+            UserRequest(username=username, password=password),
+            pool,
+        )
+        logger.info(f"Default admin user '{username}' created")
+    except Exception as e:
+        logger.error(f"Error creating admin user: {str(e)}")
+
+
 def lifecycle_provider(settings: Settings):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         try:
             app.settings = settings
             app.pool = AsyncConnectionPool(
-                config.DB_URL,
-                min_size=config.DB_POOL_MIN_SIZE,
-                max_size=config.DB_POOL_MAX_SIZE,
+                settings.DB_URL,
+                min_size=settings.DB_POOL_MIN_SIZE,
+                max_size=settings.DB_POOL_MAX_SIZE,
                 open=False,
-                max_idle=config.DB_POOL_IDLE_TIMEOUT,
-                max_lifetime=config.DB_POOL_LIFETIME_TIMEOUT,
+                max_idle=settings.DB_POOL_IDLE_TIMEOUT,
+                max_lifetime=settings.DB_POOL_LIFETIME_TIMEOUT,
                 configure=setup_pgvector_psycopg,
             )
-            pgai.install(config.DB_URL)
             await app.pool.open()
 
+            await ensure_pgai_installed(app.pool, settings)
+
+            if settings.CREATE_DEFAULT_ADMIN_USER:
+                await create_default_admin(
+                    app.pool,
+                    username=settings.ADMIN_USERNAME,
+                    password=settings.ADMIN_PASSWORD,
+                )
+
             # Initialize the clients
-            if config.USE_LLAMA_PARSE:
+            if settings.USE_LLAMA_PARSE:
                 app.parser_client = LlamaParseClient(
-                    auto_mode=config.LLAMA_PARSE_AUTO_MODE
+                    auto_mode=settings.LLAMA_PARSE_AUTO_MODE
                 )
             else:
                 app.parser_client = None

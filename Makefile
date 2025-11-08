@@ -30,7 +30,10 @@ docker-cleanup:
 	docker network prune -f
 	docker system prune -f
 
-
 .PHONY: dev-up
-dev-up: docker-cleanup
+dev-up:
 	docker compose up -d
+
+.PHONY: dev-down
+dev-down:
+	docker compose down

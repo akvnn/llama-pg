@@ -17,14 +17,20 @@ class Settings(BaseSettings):
     DB_POOL_LIFETIME_TIMEOUT: int = 1800
 
     # Security Configuration
-    JWT_EXPIRES_IN: int = 3600  # in seconds
+    JWT_EXPIRES_IN: int = "1296000"  # in seconds
     JWT_SECRET_KEY: str = "some_dummy_key"
+
+    # Admin User Configuration
+    CREATE_DEFAULT_ADMIN_USER: bool = True
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "password"
 
     # OpenAI/vLLM Configuration
     OPENAI_API_KEY: str = "some_dummy_key"  # used for both OpenAI and vLLM
     OPENAI_EMBEDDING_MODEL: str = (
         "text-embedding-3-small"  # used for both OpenAI and vLLM
     )
+    OPENAI_EMBEDDING_DIMENSIONS: int = 1536  # used for both OpenAI and vLLM
     OPENAI_MODEL: str = "gpt-5"  # used for both OpenAI and vLLM
     OPENAI_HOST: str = "https://api.openai.com/v1"  # used for both OpenAI and vLLM
     USE_VLLM: bool = False

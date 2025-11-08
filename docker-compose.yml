@@ -1,4 +1,19 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      # dockerfile: Dockerfile.dev
+    container_name: llama-pg-frontend
+    ports:
+      - "5173:5173"
+    # volumes:
+      # - ./frontend:/app
+      # - /app/node_modules
+    environment:
+      # NODE_ENV: development
+      NODE_ENV: production
+      VITE_API_URL: http://localhost:8000
+      VITE_JWT_EXPIRES_IN: 1296000
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -7,57 +22,67 @@ services:
     volumes:
       - redis_data:/data
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     networks:
       - llama-pg-net
   postgres:
     image: timescale/timescaledb-ha:pg17
     container_name: timescaledb
-    ports: 
-     - 5432:5432
+    ports:
+      - 5432:5432
     environment:
-     - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=password
     volumes:
       - pg_data:/home/postgres/pgdata/data
       - ./init_psql.sql:/docker-entrypoint-initdb.d/init_psql.sql
     restart: always
+    command: postgres -c  'timescaledb.telemetry_level=off'
+    logging:
+      driver: none
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - llama-pg-net
-  vectorizer-worker:
-    image: timescale/pgai-vectorizer-worker:latest
-    environment:
-      PGAI_VECTORIZER_WORKER_DB_URL: ${DB_URL}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-    depends_on:
-      - postgres
-    networks:
-      - llama-pg-net
-  parser-worker:
-    build: 
+  worker:
+    build:
       context: .
       dockerfile: Dockerfile
-    command: arq src.worker.WorkerSettings
-    container_name: parser-worker
+    command: .venv/bin/python -m src.worker
+    container_name: worker
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # volumes:
+      # - ./src/:/opt/src # for development. remove this bind mount for production
     networks:
       - llama-pg-net
   llama-pg-api:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload # remove reload for prod
+    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} # --reload # remove reload for prod
     container_name: llama-pg-api
     ports:
       - ${API_PORT:-8000}:${API_PORT:-8000}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
-    volumes:
-      - ./src/:/opt/src # for development. remove this bind mount for production
+    # volumes:
+      # - ./src/:/opt/src # for development. remove this bind mount for production
     networks:
       - llama-pg-net
     healthcheck:

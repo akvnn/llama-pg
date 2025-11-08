@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
-from src.models.models import ProjectRequest
+from src.models.project import ProjectRequest
 from src.models.pagination import (
     PaginationParams,
     PaginationResponse,
@@ -25,7 +25,7 @@ async def create_project(
         project_name = request.project_name
         project_description = request.project_description
         organization_id = request.organization_id
-        # Check user access to organization and project does not exist
+
         user_has_access = await worker_client.check_user_access_to_organization(
             organization_id=organization_id,
             user_id=user_id,
@@ -51,20 +51,20 @@ async def create_project(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error creating project '{project_name}': {str(e)}")
+        logger.error(f"Error creating project: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Error creating project",
         )
 
 
-@router.get("/projects")
+@router.get("/projects", response_model=PaginationResponse)
 async def get_projects(
-    request: ParamRequest = Depends(),
+    request: ParamRequest = Depends(),  # note, project_id is not considered here.
     user_id: str = Depends(get_current_user_id),
     worker_client: WorkerClient = Depends(get_worker_client),
 ):
-    """Endpoint to retrieve all projects"""
+    """Endpoint to retrieve all projects with details"""
     try:
         user_has_access = await worker_client.check_user_access_to_organization(
             organization_id=request.organization_id,
@@ -78,10 +78,10 @@ async def get_projects(
                     "message": "Organization does not exist or user does not have access."
                 },
             )
-        projects = await worker_client.get_all_projects(
+        resp = await worker_client.get_all_projects_details(
             organization_id=request.organization_id
         )
-        return JSONResponse(status_code=200, content={"data": projects})
+        return resp
     except HTTPException:
         raise
     except Exception as e:
@@ -116,13 +116,25 @@ async def get_projects_info(
                 return JSONResponse(
                     status_code=404,
                     content={
-                        "message": f"Project '{project_id}' in organization '{organization_id}' does not exist or user does not have access."
+                        "message": "Project does not exist or user does not have access."
                     },
                 )
             projects = [project_id]
             total_projects = 1
         else:
-            # TODO: check user has access to organization
+            user_has_access = await worker_client.check_user_access_to_organization(
+                organization_id=organization_id,
+                user_id=user_id,
+                roles_allowed=["member", "admin", "owner"],
+            )
+            if not user_has_access:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "message": "Organization does not exist or user does not have access."
+                    },
+                )
+
             all_projects = await worker_client.get_all_projects(
                 organization_id=organization_id
             )

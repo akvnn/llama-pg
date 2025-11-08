@@ -34,6 +34,6 @@ class PaginationResponse(BaseModel):
     total_count: int | None = None
     page: int | None = None
     per_page: int | None = None
-    total_pages: int
-    has_next: bool
-    has_previous: bool
+    total_pages: int | None = None
+    has_next: bool | None = None
+    has_previous: bool | None = None

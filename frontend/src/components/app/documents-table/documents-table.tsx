@@ -1,0 +1,611 @@
+import * as React from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  CircleCheck,
+  EllipsisVertical,
+  GripVertical,
+  Columns2,
+  CloudUpload,
+  FileCheck2,
+  FileCog,
+  ArrowUpDown,
+  RefreshCw,
+} from "lucide-react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type Row,
+  type SortingState,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
+
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { DocumentsTableCellViewer } from "./documents-table-cell-viewer";
+import axiosInstance from "@/axios";
+import { base64ToBlob } from "@/lib/blob";
+import {
+  documentSchema,
+  type Document,
+  type DocumentDetail,
+} from "@/types/document.types";
+import { formatDate } from "@/lib/utils";
+
+export const schema = documentSchema;
+// Create a separate component for the drag handle
+function DragHandle({ id }: { id: string }) {
+  const { attributes, listeners } = useSortable({
+    id,
+  });
+
+  return (
+    <Button
+      {...attributes}
+      {...listeners}
+      variant="ghost"
+      size="icon"
+      className="text-muted-foreground size-7 hover:bg-transparent cursor-grab"
+    >
+      <GripVertical className="text-muted-foreground size-3" />
+      <span className="sr-only">Drag to reorder</span>
+    </Button>
+  );
+}
+
+const getStatusIcon = (status: string) => {
+  status = status.toLowerCase();
+  if (status.includes("ready")) {
+    return <CircleCheck className="fill-chart-3 text-chart-3" />;
+  } else if (status.includes("pending")) {
+    return <CloudUpload className="text-chart-5" />;
+  } else if (status.includes("queued")) {
+    return <FileCheck2 className="text-chart-1" />;
+  }
+  return <FileCog className="text-muted-foreground" />;
+};
+
+const handleCopy = (item: Document) => {
+  navigator.clipboard.writeText(item.document_uploaded_name);
+};
+
+const handleDownload = async (item: Document) => {
+  try {
+    const response = await axiosInstance.get<DocumentDetail>("/document", {
+      params: {
+        document_id: item.document_id,
+        project_id: item.project_id,
+        organization_id: item.organization_id,
+      },
+    });
+
+    const { file_bytes, document_type } = response.data;
+
+    const blobUrl = base64ToBlob(file_bytes, document_type);
+    const link = document.createElement("a");
+    link.download = item.document_uploaded_name;
+    link.href = blobUrl;
+    link.click();
+  } catch (error: any) {
+    console.error("Error downloading document:", error);
+    alert("Failed to download document");
+  }
+};
+
+const handleDelete = async (item: Document, onSuccess?: () => void) => {
+  if (
+    !confirm(
+      `Are you sure you want to delete "${item.document_uploaded_name}"?`
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await axiosInstance.delete("/delete_document", {
+      params: {
+        document_id: item.document_id,
+        project_id: item.project_id,
+        organization_id: item.organization_id,
+      },
+    });
+
+    alert("Document deleted successfully");
+    if (onSuccess) {
+      onSuccess();
+    }
+  } catch (error: any) {
+    console.error("Error deleting document:", error);
+    alert(error.response?.data?.message || "Failed to delete document");
+  }
+};
+
+const createColumns = (
+  onDeleteSuccess: (documentId: string) => void,
+  onRefresh?: () => void
+): ColumnDef<Document>[] => [
+  {
+    id: "drag",
+    header: () => null,
+    cell: ({ row }) => <DragHandle id={row.original.document_uploaded_name} />,
+  },
+  {
+    accessorKey: "document_uploaded_name",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Document Name
+          <ArrowUpDown />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      return <DocumentsTableCellViewer item={row.original} />;
+    },
+    enableSorting: true,
+    enableGlobalFilter: true,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "project_name",
+    header: "Project",
+    cell: ({ row }) => {
+      return row.original.project_name;
+    },
+    enableGlobalFilter: true,
+  },
+  {
+    accessorKey: "status",
+    header: ({ column }) => {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Status
+            <ArrowUpDown />
+          </Button>
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRefresh}
+              className="size-8"
+              title="Refresh status"
+            >
+              <RefreshCw className="size-4" />
+              <span className="sr-only">Refresh status</span>
+            </Button>
+          )}
+        </div>
+      );
+    },
+    cell: ({ row }) => (
+      <Badge variant="outline" className="text-muted-foreground px-1.5">
+        {getStatusIcon(row.original.status)}
+        {row.original.status}
+      </Badge>
+    ),
+    enableSorting: true,
+    enableGlobalFilter: false,
+  },
+  {
+    accessorKey: "created_at",
+    header: () => "Uploaded At",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {formatDate(row.original.created_at)}
+      </span>
+    ),
+    enableGlobalFilter: false,
+  },
+  {
+    accessorKey: "uploaded_by",
+    header: () => "Uploaded By",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.uploaded_by_user_name || "No uploader"}
+      </span>
+    ),
+    enableGlobalFilter: false,
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="data-[state=open]:bg-muted text-muted-foreground flex size-8 ms-auto"
+            size="icon"
+          >
+            <EllipsisVertical />
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-32">
+          <DropdownMenuItem onClick={() => handleCopy(row.original)}>
+            Copy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleDownload(row.original)}>
+            Download
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() =>
+              handleDelete(row.original, () =>
+                onDeleteSuccess(row.original.document_id)
+              )
+            }
+          >
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
+  },
+];
+
+function DraggableRow({ row }: { row: Row<Document> }) {
+  const { transform, transition, setNodeRef, isDragging } = useSortable({
+    id: row.original.document_uploaded_name,
+  });
+
+  return (
+    <TableRow
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
+      ref={setNodeRef}
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition,
+      }}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+}
+
+export const DocumentsTable: React.FC<{
+  data: Document[];
+  loading: boolean;
+  limit?: number;
+  onRefresh?: () => void;
+}> = ({ data: externalData, loading, limit, onRefresh }) => {
+  const [data, setData] = React.useState<Document[]>(externalData);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: limit || 10,
+  });
+  const sortableId = React.useId();
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {})
+  );
+
+  React.useEffect(() => {
+    setData(externalData);
+  }, [externalData]);
+
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () =>
+      data?.map(({ document_uploaded_name }) => document_uploaded_name) || [],
+    [data]
+  );
+
+  const [globalFilter, setGlobalFilter] = React.useState<[]>([]);
+
+  const handleDeleteSuccess = React.useCallback((documentId: string) => {
+    setData((prevData) =>
+      prevData.filter((doc) => doc.document_id !== documentId)
+    );
+  }, []);
+
+  const columns = React.useMemo(
+    () => createColumns(handleDeleteSuccess, onRefresh),
+    [handleDeleteSuccess, onRefresh]
+  );
+
+  const table = useReactTable({
+    data,
+    columns,
+    onGlobalFilterChange: setGlobalFilter,
+    state: {
+      sorting,
+      columnVisibility,
+      rowSelection,
+      columnFilters,
+      pagination,
+      globalFilter,
+    },
+    getRowId: (row) => row.document_uploaded_name,
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+  });
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (active && over && active.id !== over.id) {
+      setData((data) => {
+        const oldIndex = dataIds.indexOf(active.id);
+        const newIndex = dataIds.indexOf(over.id);
+        return arrayMove(data, oldIndex, newIndex);
+      });
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                Loading...
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <Input
+          placeholder="Filter Projects or Documents..."
+          value={globalFilter ?? ""}
+          onChange={(e) => table.setGlobalFilter(String(e.target.value))}
+          className="max-w-60 sm:max-w-sm"
+        />
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Columns2 />
+                <span className="hidden lg:inline">Columns</span>
+                <span className="lg:hidden">Columns</span>
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {table
+                .getAllColumns()
+                .filter(
+                  (column) =>
+                    typeof column.accessorFn !== "undefined" &&
+                    column.getCanHide()
+                )
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-lg border">
+        <DndContext
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={handleDragEnd}
+          sensors={sensors}
+          id={sortableId}
+        >
+          <Table>
+            <TableHeader className="bg-muted sticky top-0 z-10">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody className="**:data-[slot=table-cell]:first:w-8">
+              {table.getRowModel().rows?.length ? (
+                <SortableContext
+                  items={dataIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {table.getRowModel().rows.map((row) => (
+                    <DraggableRow key={row.id} row={row} />
+                  ))}
+                </SortableContext>
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </DndContext>
+      </div>
+      <div className="flex items-center justify-between px-4">
+        {/*  <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div> */}
+        <div className="flex w-full items-center gap-8 lg:w-fit ms-auto">
+          <div className="hidden items-center gap-2 lg:flex">
+            <Label htmlFor="rows-per-page" className="text-sm font-medium">
+              Rows per page
+            </Label>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
+              }}
+            >
+              <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-fit items-center justify-center text-sm font-medium">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden size-8 lg:flex"
+              size="icon"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};

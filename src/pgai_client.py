@@ -1,6 +1,6 @@
+import json
 import sys
 import asyncio
-import uuid
 
 # Set Windows-compatible event loop policy
 if sys.platform == "win32":
@@ -8,7 +8,6 @@ if sys.platform == "win32":
 
 import os
 from typing import List
-from loguru import logger
 from openai import AsyncOpenAI
 from psycopg.rows import class_row
 import re
@@ -27,62 +26,6 @@ class PGAIClient:
     def __init__(self, config: Settings = Settings()):
         self.config = config
 
-    # async def define_schema(self, organization_id: str):
-    #     """
-    #     Create the pgai table for the organization
-    #     """
-    #     pass
-    # # MOVED TO UTILS
-
-    # async def create_vectorizer(self, schema_name, table_name="wiki"):
-    #     """
-    #     Create a vectorizer that defines how embeddings are generated from the wiki table.
-    #     The vectorizer specifies:
-    #     - The source table ('wiki')
-    #     - The column to use for generating embeddings ('text')
-    #     - The embedding model to use
-    #     - The destination view for querying embeddings ('wiki_embedding')
-    #     """
-    #     pass
-    # # MOVED TO UTILS
-
-    async def load_documents_to_db(self, organization_id, project_id, documents):
-        """
-        Load your parsed documents into the database.
-        The vectorizer worker will automatically generate embeddings for these documents.
-        """
-        await db.connect()
-
-        # Convert project_id once
-        project_uuid = (
-            uuid.UUID(project_id) if isinstance(project_id, str) else project_id
-        )
-
-        # Prepare all records in advance
-        records = []
-        for doc in documents:
-            content = doc.text if hasattr(doc, "text") else str(doc)
-            metadata = doc.metadata if hasattr(doc, "metadata") else []
-            title = (
-                metadata.get("title", "")
-                if isinstance(metadata, dict)
-                else getattr(metadata, "title", "")
-            )
-            records.append((title, metadata, content, project_uuid))
-
-        # Single batch insert
-        async with db.connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.executemany(
-                    f"""
-                    INSERT INTO "{organization_id}".{TableNames.reserved_pgai_table_name} 
-                    (title, metadata, text, project_id) 
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    records,
-                )
-            await conn.commit()
-
     async def find_relevant_chunks(
         self, query: str, limit: int, organization_id: str, project_id: str
     ) -> List[DocumentSearchResult]:
@@ -93,14 +36,12 @@ class PGAIClient:
         # Normalize whitespace
         sanitized_query = " ".join(text.split())
 
-        logger.debug(sanitized_query)
-
         client = AsyncOpenAI(
             api_key=self.config.OPENAI_API_KEY, base_url=self.config.OPENAI_BASE_URL
         )
         response = await client.embeddings.create(
             model=self.config.OPENAI_EMBEDDING_MODEL,
-            input=query,
+            input=sanitized_query,
             encoding_format="float",
         )
 
@@ -110,21 +51,23 @@ class PGAIClient:
         # Query the database for the most similar chunks using pgvector's cosine distance operator (<=>)
         async with db.connection() as conn:
             async with conn.cursor(row_factory=class_row(DocumentSearchResult)) as cur:
-                # TODO: check if thi is _embedding or without it
                 await cur.execute(
                     f"""
-                        SELECT w.id, w.title, w.metadata, w.text, w.chunk, w.embedding <=> %s as distance
+                        SELECT w.id, w.project_id, w.title, w.metadata, w.text, w.chunk, w.embedding <=> %s as distance
                             FROM "{organization_id}".{TableNames.reserved_pgai_table_name}_embedding w
                             WHERE w.project_id = %s
+                            AND w.deleted_at IS NULL
                             ORDER BY distance
                             LIMIT %s
                     """,
                     (embedding, project_id, limit),
                 )
+                results = await cur.fetchall()
+                return results
 
-                return await cur.fetchall()
-
-    async def rag_query(self, query, limit, organization_id: str, project_id: str):
+    async def rag_query(
+        self, query, system_prompt: str, limit, organization_id: str, project_id: str
+    ):
         """
         Perform RAG (Retrieval-Augmented Generation) using your documents.
         """
@@ -134,7 +77,8 @@ class PGAIClient:
         )
 
         context = "\n\n".join(
-            f"Document {chunk.url}:\n{chunk.text}" for chunk in relevant_chunks
+            f"Document {json.dumps(chunk.metadata)}:\n{chunk.text}"
+            for chunk in relevant_chunks
         )
         prompt = f"""Question: {query}
 
@@ -147,7 +91,11 @@ class PGAIClient:
             api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL
         )
         response = await client.chat.completions.create(
-            model=config.OPENAI_MODEL, messages=[{"role": "user", "content": prompt}]
+            model=config.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
         )
 
         return response.choices[0].message.content

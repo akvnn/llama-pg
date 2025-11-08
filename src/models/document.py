@@ -21,7 +21,7 @@ class DocumentSearchResult:
     distance: float
 
     def __str__(self):
-        return f"""WikiSearchResult:
+        return f"""SearchResult:
                 ID: {self.id}
                 Title: {self.title}
                 Metadata: {self.metadata}
@@ -39,12 +39,15 @@ class DocumentStatus(str, Enum):
 
 
 class DocumentInfo(BaseModel):
+    document_id: uuid.UUID
     document_uploaded_name: str
     metadata: dict
     status: DocumentStatus
-    uploaded_by_user_id: uuid.UUID
+    uploaded_by_user_name: str
     created_at: datetime.datetime
+    project_id: uuid.UUID
     project_name: str
+    organization_id: str
 
 
 class DocumentDetail(BaseModel):
@@ -58,7 +61,7 @@ class DocumentDetail(BaseModel):
     parsed_markdown_text: str | None = None
     file_bytes: str
     summary: str | None = None
-    uploaded_by_user_id: uuid.UUID
+    uploaded_by_user_name: str
 
     @field_validator("file_bytes", mode="before")
     @classmethod
