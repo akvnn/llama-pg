@@ -1,69 +1,30 @@
 # 🦙 llama-pg
 
-A production-ready RAG as a Service (RaaS) orchestrator built on top of [**pgai**](https://github.com/timescale/pgai) for intelligent document parsing, vector embeddings generation, and RAG.
+A production-ready multi-tenant RAG as a Service (RaaS) orchestrator for intelligent document parsing, vector embeddings generation, and retrieval-augmented generation—enabling you to automate embeddings across all your projects in one place
 
 ## 🚀 Features
 
-- **PDF Processing**: Automatic PDF parsing using LlamaParse (or any supported parser) with configurable auto-mode
-- **Vector Embeddings**: Built-in support for vLLM embeddings (e.g., BAAI/bge-m3) or OpenAI embeddings
-- **Admin Interface**: Easy-to-use admin panel for document management
-- **REST API**: Simple API endpoints for document insertion and retrieval
+- **PDF Processing**: Automatic PDF parsing using [LlamaParse]((https://cloud.llamaindex.ai/)) (or any supported parser)
+- **Vector Embeddings**: Built-in support for any embedding model (e.g., BAAI/bge-m3 or OpenAI's text-embedding-3-small)
+- **Admin Interface**: Easy-to-use admin panel for organization, project, and document management
+- **REST API**: a FastAPI built to support a multi-tenant and multi-project setup
 - **Worker Architecture**: Scalable background processing with ARQ workers
-- **pgai Integration**: Leverages TimescaleDB's pgai extension for vector operations
+- **pgai Integration**: Leverages TimescaleDB's [pgai](https://github.com/timescale/pgai) extension for vector operations
 
-## 🏗️ Architecture
-
-```
-┌─────────────────┐
-│   Admin UI      │
-└─────────┬───────┘
-          │  (uses REST API)
-          ▼
-┌─────────────────┐
-│   REST API      │◄─────────────┐
-└─────────┬───────┘              │
-          │                      │
-          │                      │
-          │                      │
-          ▼                      │
-                    ┌─────────────▼───────────────┐
-                    │        Redis Queue          │
-                    └─────────────┬───────────────┘
-                                  │
-                    ┌─────────────▼───────────────┐
-                    │     Parser Worker           │
-                    │    (LlamaParse)             │
-                    └─────────────┬───────────────┘
-                                  │
-                    ┌─────────────▼───────────────┐
-                    │   TimescaleDB + pgai        │
-                    │   (Parsed Content)          │
-                    └─────────────┬───────────────┘
-                                  │
-                    ┌─────────────▼───────────────┐
-                    │   pgai Vectorizer Worker    │
-                    │   (vLLM/OpenAI Embeddings)  │
-                    └─────────────▲───────────────┘
-                                  │
-                    ┌─────────────────────────────┐
-                    │   TimescaleDB + pgai        │
-                    │   (Vector Storage)          │
-                    └─────────────────────────────┘
-```
-### Pipeline: PDF → Embeddings
+### Pipeline: Document → Embeddings
 
 ```
-📄 PDF Upload
+📄 Document Upload
     ↓
 🔄 QUEUED (Redis)
     ↓
 📝 PARSING (Parser Worker)
     ↓
-💾 PARSED (PostgreSQL - documents table)
+💾 PARSED (PostgreSQL - TimescaleDB)
     ↓
-🤖 VECTORIZING (pgai Worker)
+🤖 VECTORIZING (Vectorizer Worker - pgai)
     ↓
-🔍 READY (PostgreSQL - pgai vector tables)
+🔍 READY (PostgreSQL - TimescaleDB)
 ```
 
 ## 🛠️ Quick Start
@@ -71,8 +32,8 @@ A production-ready RAG as a Service (RaaS) orchestrator built on top of [**pgai*
 ### Prerequisites
 
 - Docker & Docker Compose
-- LlamaParse API key (get from [LlamaIndex](https://cloud.llamaindex.ai/))
-- vLLM or OpenAI API key for embeddings with a deployed embedding model
+- LlamaCloud API key for document parsing (get from [LlamaIndex](https://cloud.llamaindex.ai/))
+- OpenAI API key for embeddings (or vLLM with a deployed embedding model)
 
 ### vLLM Prerequisites (optional)
 
@@ -162,43 +123,49 @@ docker-compose up --build -d
 This will start:
 - **PostgreSQL** (TimescaleDB with pgai): `localhost:5432`
 - **Redis**: `localhost:6379`
-- **Parser Worker**: Background PDF processing
-- **Vectorizer Worker**: pgai vector processing
-- **API and Admin Panel**: API and admin panel to manage all services
+- **API**: API to manage all services `localhost:8000`
+- **Admin Panel**: Frontend to interact with the API `localhost:5173`
+- **Worker**: Background parsing and vector processing
 
-For local development instructions, see the [Development](#-development) section below (using `uv`).
+For local development instructions, see the [Development](#-development) section below (using `uv`). Alternatively, you can use docker compose for development by uncommenting the bind mounts.
 
 ## 📚 Usage
+
+### Admin Interface
+
+Access the admin panel at `http://localhost:5173` to:
+- Create and manage organizations and projects
+- Upload and organize documents
+- Monitor processing status
+- Search and chat with your documents
 
 ### API Endpoints
 
 Simply navigate to `http://localhost:8000/docs` in your browser to access the full API documentation.
 
-### Admin Interface
-
-Access the admin panel at `http://localhost:8000/admin` to:
-- Manage parsing and vectorizer tables for all projects
-- Upload and manage documents
-- Monitor processing status
-- Configure parsing settings
-- View vector embeddings
-
 ## 🔧 Development
 
 ### Local Development Setup
 
+#### API
+
 **Using uv (recommended):**
 ```bash
 uv sync
+uv run -m src.server
+```
+
+#### Frontend
+
+**Using bun (recommended):**
+```bash
+bun install
+bun run dev
 ```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git switch -c feature/amazing-feature`) or a bug fix   branch (`git switch -c bugfix/your-bug-description`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Contributions are welcome! Please open an issue or submit a pull request.
 
 ## 📝 License
 
