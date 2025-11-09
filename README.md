@@ -120,7 +120,7 @@ REDIS_ARQ_MAX_JOBS=10
 **Using Helm (recommended):**
 
 ```bash
-helm repo add akvnn https://akvnn.github.io/wordpress-helm
+helm repo add akvnn https://akvnn.github.io/llama-pg
 
 helm repo update
 
@@ -139,7 +139,7 @@ Note: the helm chart comes pre-packaged with TimescaleDB and redis dependencies,
 **Using Docker:**
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 This will start:
@@ -148,6 +148,8 @@ This will start:
 - **API**: API to manage all services `localhost:8000`
 - **Admin Panel**: Frontend to interact with the API `localhost:5173`
 - **Worker**: Background parsing and vector processing
+
+***Important Note:** the docker images may take some time to build for the first time due to `pgai`'s dependency on `torch` and `cuda`.*
 
 For local development instructions, see the [Development](#-development) section below (using `uv`). Alternatively, you can use docker compose for development by uncommenting the bind mounts.
 
