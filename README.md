@@ -149,9 +149,8 @@ This will start:
 - **Admin Panel**: Frontend to interact with the API `localhost:5173`
 - **Worker**: Background parsing and vector processing
 
-***Important Note:** the docker images may take some time to build for the first time due to `pgai`'s dependency on `torch` and `cuda`.*
 
-For local development instructions, see the [Development](#-development) section below (using `uv`). Alternatively, you can use docker compose for development by uncommenting the bind mounts.
+For local development instructions, see the [Development](#-development) section below (using `uv` or `docker-compose-dev.yml`). 
 
 ## 📚 Usage
 
@@ -185,6 +184,14 @@ uv run -m src.server
 ```bash
 bun install
 bun run dev
+```
+
+#### Development Docker Compose
+
+Alternatively, you can use `docker-compose-dev.yml` docker compose for development which uses bind mounts for hot reload. However, please note that the docker images may take some time to build for the first time due to `pgai`'s dependency on `torch` and `cuda`.
+
+```bash
+docker compose -f docker-compose-dev.yml up -d
 ```
 
 ## 🤝 Contributing

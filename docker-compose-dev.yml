@@ -1,11 +1,17 @@
 services:
   frontend:
-    image: akvn/llama-pg-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: llama-pg-frontend
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
+      # NODE_ENV: production
       VITE_API_URL: http://localhost:8000
       VITE_JWT_EXPIRES_IN: 1296000
   redis:
@@ -46,7 +52,9 @@ services:
     networks:
       - llama-pg-net
   worker:
-    image: akvn/llama-pg-api:latest # api and worker use the same image
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: .venv/bin/python -m src.worker
     container_name: worker
     env_file:
@@ -56,11 +64,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./src/:/opt/src # for development. remove this bind mount for production
     networks:
       - llama-pg-net
   llama-pg-api:
-    image: akvn/llama-pg-api:latest # api and worker use the same image
-    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn src.server:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload # remove reload for prod
     container_name: llama-pg-api
     ports:
       - ${API_PORT:-8000}:${API_PORT:-8000}
@@ -69,6 +81,8 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    volumes:
+      - ./src/:/opt/src # for development. remove this bind mount for production
     networks:
       - llama-pg-net
     healthcheck:
